@@ -62,10 +62,12 @@
                             @switch (context.Header.Value)
                             {
                                 case nameof(SymbolInfo.IsLog):
-                                    <MSimpleCheckbox @bind-Value="context.Item.IsLog"/>
+                                    <MSimpleCheckbox Disabled="StartLogging"
+                                                     @bind-Value="context.Item.IsLog"/>
                                     break;
                                 case nameof(SymbolInfo.IsPlot):
-                                    <MSimpleCheckbox @bind-Value="context.Item.IsPlot"/>
+                                    <MSimpleCheckbox Disabled="StartLogging"
+                                                     @bind-Value="context.Item.IsPlot"/>
                                     break;
                                 default:
                                     @context.Value
@@ -152,13 +154,16 @@
                             @switch (context.Header.Value)
                             {
                                 case nameof(SymbolInfo.IsPlot):
-                                    <MSimpleCheckbox @bind-Value="context.Item.IsPlot"/>
+                                    <MSimpleCheckbox Disabled="StartLogging"
+                                                     @bind-Value="context.Item.IsPlot"/>
                                     break;
                                 case nameof(SymbolInfo.IsQuickLog):
-                                    <MSimpleCheckbox @bind-Value="context.Item.IsQuickLog"/>
+                                    <MSimpleCheckbox Disabled="StartLogging"
+                                                     @bind-Value="context.Item.IsQuickLog"/>
                                     break;
                                 case nameof(SymbolInfo.IsLog):
-                                    <MSimpleCheckbox @bind-Value="context.Item.IsLog"/>
+                                    <MSimpleCheckbox Disabled="StartLogging"
+                                                     @bind-Value="context.Item.IsLog"/>
                                     break;
                                 default:
                                     @context.Value
@@ -268,7 +273,21 @@
             return;
         }
 
-        _availableSymbols = AdsComService.GetAvailableSymbols();
+        if (!_isFirstGetAvailableSymbols && _availableSymbols.Any())
+        {
+            var tmpAvailableSymbols = AdsComService.GetAvailableSymbols();
+            var changeSymbols = tmpAvailableSymbols
+                .Where(symbol => _availableSymbols.All(s => s.FullName != symbol.FullName));
+            foreach (var symbol in changeSymbols)
+            {
+                _availableSymbols.Add(symbol);
+            }
+        }
+        else
+        {
+            _availableSymbols = AdsComService.GetAvailableSymbols();
+        }
+
         _availableSymbols.Sort((a, b) => string.Compare(a.FullName, b.FullName, StringComparison.Ordinal));
         Logger.LogInformation("Available symbols: {0}", _availableSymbols.Count);
 
@@ -276,7 +295,6 @@
         var taskCycleCountSymbol = _availableSymbols.FirstOrDefault(s => s.FullName == AdsConstants.TaskCycleCountName);
         if (taskCycleCountSymbol != null) taskCycleCountSymbol.IsQuickLog = true;
 
-        if (!_isFirstGetAvailableSymbols) return;
         // Set default log symbols by checking the config
         _availableSymbols.AsParallel().ForAll(symbol =>
         {
@@ -369,9 +387,9 @@
         var slowLogResult = LogDataService.SlowLogDict;
         LogDataService.DeleteTmpFiles();
         // export
-        await LogDataService.ExportDataAsync(quickLogResult, 
+        await LogDataService.ExportDataAsync(quickLogResult,
             _logConfig.QuickLogFileFullName, _logConfig.FileType);
-        await LogDataService.ExportDataAsync(slowLogResult, 
+        await LogDataService.ExportDataAsync(slowLogResult,
             _logConfig.SlowLogFileFullName, _logConfig.FileType);
 
         // plot

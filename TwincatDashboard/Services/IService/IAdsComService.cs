@@ -18,6 +18,9 @@ public interface IAdsComService : IDisposable
     public void DisconnectAdsServer();
     public Task DisconnectAdsServerAsync();
     public List<SymbolInfo> GetAvailableSymbols();
+    public Task<T?> ReadPlcSymbolValueAsync<T>(string symbolPath);
+    public Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value);
+    
     public List<AdsRouteInfo> ScanAdsRoutes();
     public void AddNotificationHandler(EventHandler<AdsNotificationEventArgs> handler);
     public void RemoveNotificationHandler(EventHandler<AdsNotificationEventArgs> handler);

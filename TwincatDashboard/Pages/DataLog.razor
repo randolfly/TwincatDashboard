@@ -1,5 +1,6 @@
 ﻿@inject IAdsComService AdsComService
 @inject ILogDataService LogDataService
+@inject ILogPlotService LogPlotService
 @inject ILogger<DataLog> Logger
 @page "/DataLog"
 @using System.Diagnostics
@@ -204,7 +205,7 @@
     public List<SymbolInfo> QuickLogSymbols => LogSymbols.Where(x => x.IsQuickLog).ToList();
     public List<SymbolInfo> SlowLogSymbols => LogSymbols.Where(x => x.IsSlowLog).ToList();
 
-    private Dictionary<uint, SymbolInfo> _symbolsDict = [];
+    private readonly Dictionary<uint, SymbolInfo> _symbolsDict = [];
     private bool _isFirstGetAvailableSymbols = true;
 
     #region UI Params
@@ -282,8 +283,9 @@
 
         _symbolsDict.Clear();
         LogDataService.RemoveAllChannels();
+        LogPlotService.RemoveAllChannels();
         // slow log symbols
-
+        
         // quick log symbols
         foreach (var symbol in QuickLogSymbols)
         {
@@ -297,6 +299,11 @@
             LogDataService.AddChannel(symbol.Name);
         }
         // plot symbols
+        foreach (var symbol in PlotSymbols)
+        {
+            LogPlotService.AddChannel(symbol.Name, 
+                (int)Math.Floor(3000.0 / _logConfig.QuickLogPeriod));
+        }
 
         AdsComService.AddNotificationHandler(AdsNotificationHandler);
         return true;
@@ -319,7 +326,7 @@
         // export
         await LogDataService.ExportDataAsync(logResult, _logConfig.FileFullName, _logConfig.FileType);
         // plot
-        // _logPlotService.ShowAllChannelsWithNewData(logResult, _logConfig.Period);
+        LogPlotService.ShowAllChannelsWithNewData(logResult, _logConfig.QuickLogPeriod);
         return true;
     }
 
@@ -340,7 +347,7 @@
                 Logger.LogWarning("Symbol not found for handle: {0}", e.Handle);
                 return;
             }
-
+            
             var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
             if (dataType == null)
             {
@@ -376,7 +383,7 @@
             };
 
             await LogDataService.AddDataAsync(symbol.Name, result);
-            // _logPlotService.AddData(symbol.Name, result);
+            LogPlotService.AddData(symbol.Name, result);
         }
         catch (Exception exception)
         {

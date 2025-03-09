@@ -161,6 +161,55 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         }
     }
 
+    public async Task<T?> ReadPlcSymbolValueAsync<T>(string symbolPath)
+    {
+        var resultHandle = await _adsClient
+            .CreateVariableHandleAsync(symbolPath, CancellationToken.None);
+        var varHandle = resultHandle.Handle;
+        if (!resultHandle.Succeeded) return default;
+        try
+        {
+            var resultRead = await _adsClient
+                .ReadAnyAsync<T>(varHandle, CancellationToken.None);
+            return resultRead.Succeeded ? resultRead.Value : default;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Failed to read plc symbol value: {symbolPath}");
+        }
+        finally
+        {
+            await _adsClient.DeleteVariableHandleAsync(varHandle, CancellationToken.None);
+        }
+
+        return default;
+    }
+
+    public async Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value)
+    {
+        if (value == null) return false;
+        var resultHandle = await _adsClient
+            .CreateVariableHandleAsync(symbolPath, CancellationToken.None);
+        var varHandle = resultHandle.Handle;
+        if (!resultHandle.Succeeded) return false;
+        try
+        {
+            var resultWrite = await _adsClient
+                .WriteAnyAsync(varHandle, value, CancellationToken.None);
+            return resultWrite.Succeeded;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Failed to write plc symbol {symbolPath} with value {value}");
+        }
+        finally
+        {
+            await _adsClient.DeleteVariableHandleAsync(varHandle, CancellationToken.None);
+        }
+
+        return false;
+    }
+
     public void Dispose() => _adsClient.Dispose();
 
     public void AddNotificationHandler(EventHandler<AdsNotificationEventArgs> handler) =>

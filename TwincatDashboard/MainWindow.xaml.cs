@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         serviceCollection.AddMasaBlazor();
         serviceCollection.AddSingleton<IAdsComService, AdsComService>();
         serviceCollection.AddSingleton<ILogDataService, LogDataService>();
+        serviceCollection.AddSingleton<ILogPlotService, LogPlotService>();
         serviceCollection.AddLogging(loggingBuilder =>
         {
             loggingBuilder.SetMinimumLevel(LogLevel.Trace)

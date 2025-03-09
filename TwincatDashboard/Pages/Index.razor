@@ -1,32 +1,38 @@
 ﻿@page "/"
-@inject ILogger<Index> TestLogger
+@using TwincatDashboard.Services.IService
+@inject IAdsComService AdsComService
+@inject ILogger<Index> Logger
 
-<PageTitle>Index</PageTitle>
+<MTextField @bind-Value="_plcVarName" Label="Write Plc Symbol Name"/>
+<MTextField @bind-Value="_plcVarValue" Type="number" Label="Write Plc Symbol Name"/>
 
-<h1>Hello, world!</h1>
+<MButton OnClick="GetPlcValue">GetPlcValue: @PlcTestValue</MButton>
 
-Welcome to your new app.
-
-<MTooltip Bottom>
-    <ActivatorContent>
-        <MButton Dark Color="primary"
-                 OnClick="TestClick"
-                 @attributes="@context.Attrs">Bottom
-        </MButton>
-    </ActivatorContent>
-    <ChildContent>
-        <span>Tooltip</span>
-    </ChildContent>
-</MTooltip>
-
-
-<SurveyPrompt Title="This is fire-new Blazor UI!"/>
+<MButton OnClick="SetPlcValue">SetPlcValue: @PlcTestValue With @_plcVarValue</MButton>
 
 @code
 {
-
-    private void TestClick(MouseEventArgs obj)
+    private string _plcVarName = string.Empty;
+    private ushort _plcVarValue = 0;
+    private uint? PlcTestValue { get; set; } = 0;
+    
+    private async Task GetPlcValue(MouseEventArgs arg)
     {
-        TestLogger.LogInformation("TestClick");
+        await AdsComService.ReadPlcSymbolValueAsync<ushort>(_plcVarName).ContinueWith(task =>
+        {
+            if (task.IsCompletedSuccessfully)
+            {
+                PlcTestValue = task.Result;
+            }
+            else
+            {
+                Logger.LogError(task.Exception, "Error while getting plc value");
+            }
+        });
+    }
+    
+    private async Task SetPlcValue(MouseEventArgs arg)
+    {
+        await AdsComService.WritePlcSymbolValueAsync(_plcVarName, _plcVarValue);
     }
 }

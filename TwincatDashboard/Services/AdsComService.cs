@@ -118,7 +118,7 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
 
         foreach (var symbol in symbols)
         {
-            if (symbol.InstanceName is ("MAIN" or "GVL"))
+            if (AdsConstants.ReadNamespace.Contains(symbol.InstanceName))
             {
                 symbolList.AddRange(LoadSymbolTreeBfs(symbol));
             }
@@ -163,10 +163,14 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
 
     public async Task<T?> ReadPlcSymbolValueAsync<T>(string symbolPath)
     {
-        var resultHandle = await _adsClient
-            .CreateVariableHandleAsync(symbolPath, CancellationToken.None);
+        var resultHandle = await _adsClient.CreateVariableHandleAsync(symbolPath, CancellationToken.None);
         var varHandle = resultHandle.Handle;
-        if (!resultHandle.Succeeded) return default;
+        if (!resultHandle.Succeeded)
+        {
+            _logger.LogError($"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}");
+            return default;
+        }
+
         try
         {
             var resultRead = await _adsClient
@@ -191,7 +195,12 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         var resultHandle = await _adsClient
             .CreateVariableHandleAsync(symbolPath, CancellationToken.None);
         var varHandle = resultHandle.Handle;
-        if (!resultHandle.Succeeded) return false;
+        if (!resultHandle.Succeeded)
+        {
+            _logger.LogError($"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}");
+            return false;
+        }
+
         try
         {
             var resultWrite = await _adsClient
@@ -208,6 +217,17 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         }
 
         return false;
+    }
+
+    public async Task<int> GetTaskCycleTimeAsync()
+    {
+        var cycleTime = await ReadPlcSymbolValueAsync<uint>(AdsConstants.TaskCycleTimeName);
+        if (cycleTime > 0)
+        {
+            return (int)(cycleTime / 10000);
+        }
+
+        return 1;
     }
 
     public void Dispose() => _adsClient.Dispose();

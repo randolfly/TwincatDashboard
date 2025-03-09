@@ -129,6 +129,12 @@
         </ChildContent>
 
         <AppendContent>
+            <MBorder>
+                <MCard Outlined>
+                    <MCardTitle>AdsState</MCardTitle>
+                    <MCardSubtitle>@AdsStateText</MCardSubtitle>
+                </MCard>
+            </MBorder>
             <MList Nav Dense Routable>
                 <MListItem Href="/Setting" ActiveClass="primary--text">
                     <MListItemIcon>
@@ -152,7 +158,7 @@
 </MApp>
 
 @code {
-    public string AdsStateText { get; set; } = string.Empty;
+    public string AdsStateText { get; set; } = "Invalid";
     public string NetId { get; set; } = string.Empty;
     public int PortId { get; set; } = 851;
 

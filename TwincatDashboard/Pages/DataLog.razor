@@ -2,15 +2,11 @@
 @inject ILogDataService LogDataService
 @inject ILogPlotService LogPlotService
 @inject ILogger<DataLog> Logger
-@page "/DataLog"
-@using System.Diagnostics
+@page "/"
 @using FuzzySharp
 @using TwinCAT.Ads
 @using TwinCAT.Ads.TypeSystem
-@using TwincatDashboard.Models
-@using TwincatDashboard.Services.IService
-@using TwincatDashboard.Services
-@using TwincatDashboard.Utils
+
 <div style="height: 100vh; padding-bottom: 8px">
     <MTabs FixedTabs Style="height: 100%">
         <MTab>Select Symbols</MTab>
@@ -56,7 +52,7 @@
                 {
                     <MDataTable Headers="_availableSymbolHeaders"
                                 Items="_availableSymbols"
-                                ItemKey="s=>s.Name"
+                                ItemKey="s=>s.FullName"
                                 Search="@_searchAvailableSymbolName"
                                 CustomFilter="FilterSymbolBySimilarityScore"
                                 ResizeMode="DataTableResizeMode.Auto"
@@ -146,7 +142,7 @@
                 {
                     <MDataTable Headers="_logSymbolHeaders"
                                 Items="LogSymbols"
-                                ItemKey="s=>s.Name"
+                                ItemKey="s=>s.FullName"
                                 Search="@_searchLogSymbolName"
                                 CustomFilter="FilterSymbolBySimilarityScore"
                                 ResizeMode="DataTableResizeMode.Auto"
@@ -213,7 +209,7 @@
     private readonly List<DataTableHeader<SymbolInfo>> _availableSymbolHeaders =
     [
         new() { Text = "Log", Value = nameof(SymbolInfo.IsLog), Filterable = false },
-        new() { Text = "Name", Value = nameof(SymbolInfo.Name), Filterable = false },
+        new() { Text = "FullName", Value = nameof(SymbolInfo.Name), Filterable = false },
         new() { Text = "Path", Value = nameof(SymbolInfo.Path), Filterable = false },
         new() { Text = "Type", Value = nameof(SymbolInfo.Type), Filterable = false },
     ];
@@ -223,7 +219,7 @@
         new() { Text = "Log", Value = nameof(SymbolInfo.IsLog), Filterable = false },
         new() { Text = "QuickLog", Value = nameof(SymbolInfo.IsQuickLog), Filterable = false },
         new() { Text = "Plot", Value = nameof(SymbolInfo.IsPlot), Filterable = false },
-        new() { Text = "Name", Value = nameof(SymbolInfo.Name), Filterable = false },
+        new() { Text = "FullName", Value = nameof(SymbolInfo.Name), Filterable = false },
         new() { Text = "Path", Value = nameof(SymbolInfo.Path), Filterable = false },
         new() { Text = "Type", Value = nameof(SymbolInfo.Type), Filterable = false },
     ];
@@ -244,27 +240,32 @@
         }
 
         _availableSymbols = AdsComService.GetAvailableSymbols();
-        _availableSymbols.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+        _availableSymbols.Sort((a, b) => string.Compare(a.FullName, b.FullName, StringComparison.Ordinal));
         Logger.LogInformation("Available symbols: {0}", _availableSymbols.Count);
+
+        // add default quick log symbol: AdsConstants.TaskCycleCountName
+        var taskCycleCountSymbol = _availableSymbols.FirstOrDefault(s => s.FullName == AdsConstants.TaskCycleCountName);
+        if (taskCycleCountSymbol != null) taskCycleCountSymbol.IsQuickLog = true;
 
         if (!_isFirstGetAvailableSymbols) return;
         // Set default log symbols by checking the config
         _availableSymbols.AsParallel().ForAll(symbol =>
         {
-            if (_logConfig.LogSymbols.Contains(symbol.Name))
+            if (_logConfig.LogSymbols.Contains(symbol.FullName))
             {
                 symbol.IsLog = true;
-                if (_logConfig.QuickLogSymbols.Contains(symbol.Name))
+                if (_logConfig.QuickLogSymbols.Contains(symbol.FullName))
                 {
                     symbol.IsQuickLog = true;
                 }
             }
 
-            if (_logConfig.PlotSymbols.Contains(symbol.Name))
+            if (_logConfig.PlotSymbols.Contains(symbol.FullName))
             {
                 symbol.IsPlot = true;
             }
         });
+        Task.Run(async () => _logConfig.QuickLogPeriod = await AdsComService.GetTaskCycleTimeAsync());
         _isFirstGetAvailableSymbols = false;
     }
 
@@ -285,23 +286,24 @@
         LogDataService.RemoveAllChannels();
         LogPlotService.RemoveAllChannels();
         // slow log symbols
-        
+
         // quick log symbols
         foreach (var symbol in QuickLogSymbols)
         {
-            Logger.LogInformation("Start quick log: {0}", symbol.Name);
+            Logger.LogInformation("Start quick log: {0}", symbol.FullName);
             var notificationHandle = AdsComService.AddDeviceNotification(
                 symbol.Symbol.InstancePath,
                 symbol.Symbol.ByteSize,
                 new NotificationSettings(AdsTransMode.Cyclic,
                     AppConfigService.AppConfig.LogConfig.QuickLogPeriod, 0));
             _symbolsDict.Add(notificationHandle, symbol);
-            LogDataService.AddChannel(symbol.Name);
+            LogDataService.AddChannel(symbol.FullName);
         }
+
         // plot symbols
         foreach (var symbol in PlotSymbols)
         {
-            LogPlotService.AddChannel(symbol.Name, 
+            LogPlotService.AddChannel(symbol.FullName,
                 (int)Math.Floor(3000.0 / _logConfig.QuickLogPeriod));
         }
 
@@ -332,9 +334,9 @@
 
     private void ExportLogConfig()
     {
-        _logConfig.LogSymbols = LogSymbols.Select(s => s.Name).ToList();
-        _logConfig.QuickLogSymbols = QuickLogSymbols.Select(s => s.Name).ToList();
-        _logConfig.PlotSymbols = PlotSymbols.Select(s => s.Name).ToList();
+        _logConfig.LogSymbols = LogSymbols.Select(s => s.FullName).ToList();
+        _logConfig.QuickLogSymbols = QuickLogSymbols.Select(s => s.FullName).ToList();
+        _logConfig.PlotSymbols = PlotSymbols.Select(s => s.FullName).ToList();
         AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
     }
 
@@ -347,11 +349,11 @@
                 Logger.LogWarning("Symbol not found for handle: {0}", e.Handle);
                 return;
             }
-            
+
             var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
             if (dataType == null)
             {
-                Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.Name);
+                Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.FullName);
                 return;
             }
 
@@ -362,7 +364,7 @@
             }
             catch (Exception ex)
             {
-                Logger.LogError("Error converting data for symbol: {0}, Exception: {1}", symbol.Name, ex);
+                Logger.LogError("Error converting data for symbol: {0}, Exception: {1}", symbol.FullName, ex);
                 return;
             }
 
@@ -382,15 +384,14 @@
                 _ => throw new InvalidCastException($"Unsupported data type: {dataType}")
             };
 
-            await LogDataService.AddDataAsync(symbol.Name, result);
-            LogPlotService.AddData(symbol.Name, result);
+            await LogDataService.AddDataAsync(symbol.FullName, result);
+            LogPlotService.AddData(symbol.FullName, result);
         }
         catch (Exception exception)
         {
             Logger.LogError(exception, "Error in AdsNotificationHandler");
         }
     }
-
 
     public static IEnumerable<SymbolInfo> FilterSymbolBySimilarityScore(IEnumerable<SymbolInfo> items, IEnumerable<ItemValue<SymbolInfo>> itemValues, string? search)
     {
@@ -402,7 +403,7 @@
 
     private static int GetSimilarityScore(string searchText, SymbolInfo symbolInfo)
     {
-        return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.Name.ToLower());
+        return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.FullName.ToLower());
     }
 
 }

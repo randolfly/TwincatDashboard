@@ -21,6 +21,12 @@ public interface IAdsComService : IDisposable
     public Task<T?> ReadPlcSymbolValueAsync<T>(string symbolPath);
     public Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value);
     
+    /// <summary>
+    /// Reads the task cycle time from the PLC(unit: ms), which determines the <cref>LogConfig.QuickLogPeriod</cref> time in the application.
+    /// </summary>
+    /// <returns>task cycle time, unit ms.</returns>
+    public Task<int> GetTaskCycleTimeAsync();
+    
     public List<AdsRouteInfo> ScanAdsRoutes();
     public void AddNotificationHandler(EventHandler<AdsNotificationEventArgs> handler);
     public void RemoveNotificationHandler(EventHandler<AdsNotificationEventArgs> handler);

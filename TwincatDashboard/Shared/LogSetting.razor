@@ -1,12 +1,14 @@
 ﻿@inject ILogger<LogSetting> Logger
+@inject IAdsComService AdsComService
 @using TwincatDashboard.Constants
 @using TwincatDashboard.Models
 @using TwincatDashboard.Services
+@using TwincatDashboard.Services.IService
 
 <div class="container">
     <div class="Folder">
         <MTextField Outlined Dense
-                    Label="FolderName"
+                    Label="FolderFullName"
                     HideDetails="@("auto")"
                     @bind-Value="FolderName"
                     AppendIcon="mdi-folder"
@@ -14,7 +16,7 @@
     </div>
     <div class="File">
         <MTextField Outlined Dense
-                    Label="FileName"
+                    Label="FileFullName"
                     HideDetails="@("auto")"
                     @bind-Value="FileName"
                     AppendIcon="mdi-file"/>
@@ -22,12 +24,8 @@
     <div class="QuickPeriod">
         <MTextField Outlined Dense
                     Label="QuickLogPeriod"
+                    Disabled
                     Type="number" Suffix="ms"
-                    NumberProps="@(prop =>
-                                 {
-                                     prop.Min = 1;
-                                     prop.Step = 1;
-                                 })"
                     HideDetails="@("auto")"
                     @bind-Value="QuickLogPeriod"/>
     </div>
@@ -80,13 +78,15 @@
 
     private LogConfig LogConfig { get; set; } = AppConfigService.AppConfig.LogConfig;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         FolderName = LogConfig.FolderName;
         FileName = LogConfig.FileName;
-        QuickLogPeriod = LogConfig.QuickLogPeriod;
         SlowLogPeriod = LogConfig.SlowLogPeriod;
         ExportLogTypes = LogConfig.FileType;
+
+        QuickLogPeriod = await AdsComService.GetTaskCycleTimeAsync();
+        LogConfig.QuickLogPeriod = QuickLogPeriod;
     }
 
     private void SaveLogConfig()

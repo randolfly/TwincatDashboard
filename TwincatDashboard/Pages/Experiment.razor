@@ -1,0 +1,24 @@
+﻿@page "/experiment"
+@inject IAdsComService AdsComService
+
+<MTextField @bind-Value="PlcSymbolName" Label="Symbol Name"/>
+<MTextField @bind-Value="PlcSymbolType" Label="Symbol Type"/>
+<MTextField @bind-Value="PlcSymbolValue" Label="Symbol Value"/>
+
+<MButton OnClick="ReadSymbol">Read Symbol</MButton>
+
+@code {
+    public string PlcSymbolName { get; set; }
+    public string PlcSymbolType { get; set; }
+    public double PlcSymbolValue { get; set; } = 0.0;
+
+    private async Task ReadSymbol(MouseEventArgs arg)
+    {
+        var type = Type.GetType(PlcSymbolType);
+        if (type is null) return;
+        var value = await AdsComService.ReadPlcSymbolValueAsync(PlcSymbolName, type);
+        if (value is null) return;
+        PlcSymbolValue = SymbolExtension.ConvertObjectToDouble(value, type);
+    }
+
+}

@@ -3,6 +3,7 @@
 @inject ILogPlotService LogPlotService
 @inject ILogger<DataLog> Logger
 @page "/"
+@using System.Timers
 @using FuzzySharp
 @using TwinCAT.Ads
 @using TwinCAT.Ads.TypeSystem
@@ -197,9 +198,11 @@
 
     private List<SymbolInfo> _availableSymbols = [];
     private List<SymbolInfo> LogSymbols => _availableSymbols.Where(x => x.IsLog).ToList();
-    public List<SymbolInfo> PlotSymbols => _availableSymbols.Where(x => x.IsPlot).ToList();
-    public List<SymbolInfo> QuickLogSymbols => LogSymbols.Where(x => x.IsQuickLog).ToList();
-    public List<SymbolInfo> SlowLogSymbols => LogSymbols.Where(x => x.IsSlowLog).ToList();
+    private List<SymbolInfo> PlotSymbols => _availableSymbols.Where(x => x.IsPlot).ToList();
+    private List<SymbolInfo> QuickLogSymbols => LogSymbols.Where(x => x.IsQuickLog).ToList();
+    private List<SymbolInfo> SlowLogSymbols => LogSymbols.Where(x => x.IsSlowLog).ToList();
+
+    private readonly Timer _slowLogTimer = new();
 
     private readonly Dictionary<uint, SymbolInfo> _symbolsDict = [];
     private bool _isFirstGetAvailableSymbols = true;
@@ -229,6 +232,32 @@
     protected override void OnInitialized()
     {
         _logConfig = AppConfigService.AppConfig.LogConfig;
+        _slowLogTimer.Interval = _logConfig.SlowLogPeriod;
+        _slowLogTimer.Elapsed += async (sender, e) => await SlowLogTimerElapsedAsync();
+    }
+
+    private async Task SlowLogTimerElapsedAsync()
+    {
+        foreach (var symbolName in LogDataService.SlowLogDict.Keys)
+        {
+            var symbol = _availableSymbols.FirstOrDefault(s => s.FullName == symbolName)!;
+            var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
+            if (dataType == null)
+            {
+                Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.FullName);
+                return;
+            }
+
+            var value = await AdsComService.ReadPlcSymbolValueAsync(symbol.FullName, dataType);
+            if (value is null)
+            {
+                Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.FullName);
+                return;
+            }
+
+            var result = SymbolExtension.ConvertObjectToDouble(value, dataType);
+            LogDataService.AddSlowLogData(symbol.FullName, result);
+        }
     }
 
     private void GetAvailableSymbols()
@@ -275,6 +304,7 @@
     /// <returns>true->start log successfully, false->error</returns>
     private bool StartLog()
     {
+        _slowLogTimer.Interval = _logConfig.SlowLogPeriod;
         ExportLogConfig();
         if (LogSymbols.Count == 0)
         {
@@ -285,8 +315,19 @@
         _symbolsDict.Clear();
         LogDataService.RemoveAllChannels();
         LogPlotService.RemoveAllChannels();
-        // slow log symbols
+        // slow log symbols: register slow log data
+        foreach (var symbol in SlowLogSymbols)
+        {
+            Logger.LogInformation("Start slow log: {0}", symbol.FullName);
+            LogDataService.RegisterSlowLog(symbol.FullName);
+        }
 
+        // add taskCycleCount symbol to slow log
+        var taskCycleCountSymbol = _availableSymbols
+            .FirstOrDefault(s => s.FullName == AdsConstants.TaskCycleCountName);
+        if (taskCycleCountSymbol != null) LogDataService.RegisterSlowLog(taskCycleCountSymbol.FullName);
+
+        _slowLogTimer.Start();
         // quick log symbols
         foreach (var symbol in QuickLogSymbols)
         {
@@ -320,15 +361,22 @@
         AdsComService.RemoveNotificationHandler(AdsNotificationHandler);
         _symbolsDict.Keys.ToList().ForEach(handle =>
             AdsComService.RemoveDeviceNotification(handle));
-        _symbolsDict.Clear();
+        _slowLogTimer.Stop();
 
-        // load data from tmp folder
-        var logResult = await LogDataService.LoadAllChannelsAsync();
+        _symbolsDict.Clear();
+        // quick log data: load data from tmp folder
+        var quickLogResult = await LogDataService.LoadAllChannelsAsync();
+        var slowLogResult = LogDataService.SlowLogDict;
         LogDataService.DeleteTmpFiles();
         // export
-        await LogDataService.ExportDataAsync(logResult, _logConfig.FileFullName, _logConfig.FileType);
+        await LogDataService.ExportDataAsync(quickLogResult, 
+            _logConfig.QuickLogFileFullName, _logConfig.FileType);
+        await LogDataService.ExportDataAsync(slowLogResult, 
+            _logConfig.SlowLogFileFullName, _logConfig.FileType);
+
         // plot
-        LogPlotService.ShowAllChannelsWithNewData(logResult, _logConfig.QuickLogPeriod);
+        LogPlotService.ShowAllChannelsWithNewData(quickLogResult, _logConfig.QuickLogPeriod);
+        LogDataService.RemoveAllSlowLog();
         return true;
     }
 
@@ -368,21 +416,7 @@
                 return;
             }
 
-            var result = data switch
-            {
-                bool b => b ? 1.0 : 0.0,
-                byte b => b,
-                sbyte sb => sb,
-                short s => s,
-                ushort us => us,
-                int i => i,
-                uint ui => ui,
-                long l => l,
-                ulong ul => ul,
-                float f => f,
-                double d => d,
-                _ => throw new InvalidCastException($"Unsupported data type: {dataType}")
-            };
+            var result = SymbolExtension.ConvertObjectToDouble(data, dataType);
 
             await LogDataService.AddDataAsync(symbol.FullName, result);
             LogPlotService.AddData(symbol.FullName, result);

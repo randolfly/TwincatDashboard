@@ -18,7 +18,7 @@ public interface IAdsComService : IDisposable
     public void DisconnectAdsServer();
     public Task DisconnectAdsServerAsync();
     public List<SymbolInfo> GetAvailableSymbols();
-    public Task<T?> ReadPlcSymbolValueAsync<T>(string symbolPath);
+    public Task<object?> ReadPlcSymbolValueAsync(string symbolPath, Type type);
     public Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value);
     
     /// <summary>

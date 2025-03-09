@@ -161,21 +161,22 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         }
     }
 
-    public async Task<T?> ReadPlcSymbolValueAsync<T>(string symbolPath)
+    public async Task<object?> ReadPlcSymbolValueAsync(string symbolPath, Type type)
     {
+        if (string.IsNullOrEmpty(symbolPath)) return null;
         var resultHandle = await _adsClient.CreateVariableHandleAsync(symbolPath, CancellationToken.None);
         var varHandle = resultHandle.Handle;
         if (!resultHandle.Succeeded)
         {
             _logger.LogError($"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}");
-            return default;
+            return null;
         }
 
         try
         {
             var resultRead = await _adsClient
-                .ReadAnyAsync<T>(varHandle, CancellationToken.None);
-            return resultRead.Succeeded ? resultRead.Value : default;
+                .ReadAnyAsync(varHandle, type, CancellationToken.None);
+            return resultRead.Succeeded ? resultRead.Value : null;
         }
         catch (Exception e)
         {
@@ -186,12 +187,12 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
             await _adsClient.DeleteVariableHandleAsync(varHandle, CancellationToken.None);
         }
 
-        return default;
+        return null;
     }
 
     public async Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value)
     {
-        if (value == null) return false;
+        if (string.IsNullOrEmpty(symbolPath) || value == null) return false;
         var resultHandle = await _adsClient
             .CreateVariableHandleAsync(symbolPath, CancellationToken.None);
         var varHandle = resultHandle.Handle;
@@ -221,13 +222,13 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
 
     public async Task<int> GetTaskCycleTimeAsync()
     {
-        var cycleTime = await ReadPlcSymbolValueAsync<uint>(AdsConstants.TaskCycleTimeName);
-        if (cycleTime > 0)
+        var cycleTime = await ReadPlcSymbolValueAsync(AdsConstants.TaskCycleTimeName, typeof(uint)) as uint?;
+        return cycleTime switch
         {
-            return (int)(cycleTime / 10000);
-        }
-
-        return 1;
+            null => 1,
+            > 0 => (int)(cycleTime / 10000),
+            _ => 1
+        };
     }
 
     public void Dispose() => _adsClient.Dispose();

@@ -12,6 +12,7 @@ public class AppConfig
     public LogConfig LogConfig { get; set; } = new();
 
     #region 配置文件存储路径
+
     public static string AppName => Assembly.GetCallingAssembly().FullName!.Split(',')[0];
 
     public static string FolderName => Path.Combine(
@@ -21,6 +22,7 @@ public class AppConfig
 
     public static string FileName => AppName + ".json";
     public static string ConfigFileFullName => Path.Combine(FolderName, FileName);
+
     #endregion
 }
 
@@ -40,20 +42,32 @@ public class LogConfig
     public List<string> LogSymbols { get; set; } = new();
     public List<string> PlotSymbols { get; set; } = new();
     public List<string> QuickLogSymbols { get; set; } = new();
-    
+
     public string FolderName { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
     public string FileName { get; set; } = "log";
 
-    [JsonIgnore]
-    public string TempFileFullName => Path.Combine(FolderName, FileName);
+    [JsonIgnore] public string TempFileFullName => Path.Combine(FolderName, FileName);
 
     [JsonIgnore]
-    public string FileFullName
+    public string QuickLogFileFullName
     {
         get
         {
             var datetime = DateTime.Now;
-            var fileName = FileName + "_" + QuickLogPeriod + "ms"+ "_" + datetime.ToString("yyyyMMddHHmmss") ;
+            var fileName = FileName + "_quick_" + QuickLogPeriod + "ms" +
+                           "_" + datetime.ToString("yyyyMMddHHmmss");
+            return Path.Combine(FolderName, fileName);
+        }
+    }
+
+    [JsonIgnore]
+    public string SlowLogFileFullName
+    {
+        get
+        {
+            var datetime = DateTime.Now;
+            var fileName = FileName + "_slow_" + SlowLogPeriod + "ms" +
+                           "_" + datetime.ToString("yyyyMMddHHmmss");
             return Path.Combine(FolderName, fileName);
         }
     }

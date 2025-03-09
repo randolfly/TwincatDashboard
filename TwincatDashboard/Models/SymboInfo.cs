@@ -6,7 +6,7 @@ public class SymbolInfo(ISymbol symbol)
 {
     public ISymbol Symbol { get; set; } = symbol;
     public string Type => Symbol.DataType?.ToString() ?? "unknown";
-    public string FullName => string.Join(".", Symbol.InstancePath.Split('.'));
+    public string FullName => Symbol.InstancePath;
     public string Path => string.Join(".", Symbol.InstancePath.Split('.').SkipLast(1));
     public string Name => Symbol.InstancePath.Split('.').Last();
     public string ExportName => string.Join(".", Symbol.InstancePath.Split('.').Skip(1));

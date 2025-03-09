@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using TwincatDashboard.Models;
@@ -8,18 +9,19 @@ namespace TwincatDashboard.Services.IService;
 
 public interface ILogDataService
 {
-    
-    public Dictionary<string, LogDataChannel> LogDict { get; }
+    public Dictionary<string, List<double>> SlowLogDict { get; }
+    public Dictionary<string, LogDataChannel> QuickLogDict { get; }
 
     public void AddChannel(string channelName);
     public Task AddDataAsync(string channelName, double data);
     public void RemoveAllChannels();
-
-    public Task<List<double>> LoadDataAsync(string channelName);
     public Task<Dictionary<string, List<double>>> LoadAllChannelsAsync();
-
-    public Task ExportDataAsync(Dictionary<string, List<double>> dataSrc,string fileName, List<string> exportTypes);
-
+    
+    public void RegisterSlowLog(string channelName);
+    public void AddSlowLogData(string channelName, double data);
+    public void RemoveAllSlowLog();
+    
+    public Task ExportDataAsync(Dictionary<string, List<double>> dataSrc, string fileName, List<string> exportTypes);
     public void DeleteTmpFiles();
 }
 
@@ -33,11 +35,12 @@ public class LogDataChannel(int bufferCapacity, string channelName)
     {
         get
         {
-            var path = Path.Combine(AppConfig.FolderName, AppConfig.FolderName , "tmp/");
+            var path = Path.Combine(AppConfig.FolderName, AppConfig.FolderName, "tmp/");
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
+
             return path;
         }
     }
@@ -47,7 +50,8 @@ public class LogDataChannel(int bufferCapacity, string channelName)
     // storage tmp data for logging(default data type is double)
     private readonly CircularBuffer<double> _buffer = new(bufferCapacity);
 
-    public async Task AddAsync(double data) {
+    public async Task AddAsync(double data)
+    {
         _buffer.Add(data);
         if ((_buffer.Size * 2) >= _buffer.Capacity)
         {
@@ -57,23 +61,24 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         }
     }
 
-    private static async Task SaveToFileAsync(ArraySegment<double> array, string filePath) {
-
+    private static async Task SaveToFileAsync(ArraySegment<double> array, string filePath)
+    {
         var stringBuilder = new StringBuilder();
         foreach (var value in array)
         {
-            stringBuilder.AppendLine(value.ToString());
+            stringBuilder.AppendLine(value.ToString(CultureInfo.InvariantCulture));
         }
 
         await using var fileStream = new FileStream(filePath,
-            FileMode.Append, 
+            FileMode.Append,
             FileAccess.Write,
             FileShare.None, 4096, true);
         await using var writer = new StreamWriter(fileStream);
         await writer.WriteAsync(stringBuilder.ToString());
     }
 
-    public async Task<List<double>> LoadFromFileAsync() {
+    public async Task<List<double>> LoadFromFileAsync()
+    {
         var data = new List<double>();
         if (!File.Exists(FilePath))
         {
@@ -92,10 +97,12 @@ public class LogDataChannel(int bufferCapacity, string channelName)
                 data.Add(value);
             }
         }
+
         return data;
     }
 
-    public void DeleteTmpFile() {
+    public void DeleteTmpFile()
+    {
         if (File.Exists(FilePath))
         {
             File.Delete(FilePath);

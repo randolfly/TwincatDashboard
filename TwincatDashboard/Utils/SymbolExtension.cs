@@ -12,4 +12,24 @@ public static class SymbolExtension
     {
         return new SymbolInfo(symbol.Symbol);
     }
+    
+    public static double ConvertObjectToDouble(object data, Type dataType)
+    {
+        var result = data switch
+        {
+            bool b => b ? 1.0 : 0.0,
+            byte b => b,
+            sbyte sb => sb,
+            short s => s,
+            ushort us => us,
+            int i => i,
+            uint ui => ui,
+            long l => l,
+            ulong ul => ul,
+            float f => f,
+            double d => d,
+            _ => throw new InvalidCastException($"Unsupported data type: {dataType}")
+        };
+        return result;
+    }
 }

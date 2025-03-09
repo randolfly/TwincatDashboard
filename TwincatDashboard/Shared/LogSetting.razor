@@ -1,0 +1,108 @@
+﻿@inject ILogger<LogSetting> Logger
+@using TwincatDashboard.Constants
+@using TwincatDashboard.Models
+@using TwincatDashboard.Services
+
+<div class="container">
+    <div class="Folder">
+        <MTextField Outlined Dense
+                    Label="FolderName"
+                    HideDetails="@("auto")"
+                    @bind-Value="FolderName"
+                    AppendIcon="mdi-folder"
+                    OnAppendClick="SelectFolder"/>
+    </div>
+    <div class="File">
+        <MTextField Outlined Dense
+                    Label="FileName"
+                    HideDetails="@("auto")"
+                    @bind-Value="FileName"
+                    AppendIcon="mdi-file"/>
+    </div>
+    <div class="QuickPeriod">
+        <MTextField Outlined Dense
+                    Label="QuickLogPeriod"
+                    Type="number" Suffix="ms"
+                    NumberProps="@(prop =>
+                                 {
+                                     prop.Min = 1;
+                                     prop.Step = 1;
+                                 })"
+                    HideDetails="@("auto")"
+                    @bind-Value="QuickLogPeriod"/>
+    </div>
+    <div class="SlowPeriod">
+        <MTextField Outlined Dense
+                    Label="SlowLogPeriod"
+                    Type="number" Suffix="ms"
+                    NumberProps="@(prop =>
+                                 {
+                                     prop.Min = 2000;
+                                     prop.Max = 10000;
+                                     prop.Step = 500;
+                                 })"
+                    HideDetails="@("auto")"
+                    @bind-Value="SlowLogPeriod"/>
+    </div>
+    <div class="LogType">
+        <MSelect @bind-Value="ExportLogTypes"
+                 Items="AppConstants.SupportedLogFileTypes"
+                 Chips Multiple Dense
+                 ItemText="u => u"
+                 ItemValue="u => u"
+                 Label="Chips"/>
+    </div>
+    <div class="SaveConfig">
+        <div style="display: flex; height: 80%; flex-direction: row;gap: 12px;  align-items: center">
+            <MButton Color="primary" Outlined Dense
+                     Style="flex-grow: 1"
+                     OnClick="SaveLogConfig">
+                Load Log
+            </MButton>
+            <MButton Color="primary" Outlined Dense
+                     Style="flex-grow: 1"
+                     OnClick="SaveLogConfig">
+                Save Log
+            </MButton>
+        </div>
+    </div>
+</div>
+
+
+
+
+@code {
+    public string FolderName { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public int QuickLogPeriod { get; set; } = 2;
+    public int SlowLogPeriod { get; set; } = 5000;
+    public List<string> ExportLogTypes = ["mat"];
+
+    private LogConfig LogConfig { get; set; } = AppConfigService.AppConfig.LogConfig;
+
+    protected override void OnInitialized()
+    {
+        FolderName = LogConfig.FolderName;
+        FileName = LogConfig.FileName;
+        QuickLogPeriod = LogConfig.QuickLogPeriod;
+        SlowLogPeriod = LogConfig.SlowLogPeriod;
+        ExportLogTypes = LogConfig.FileType;
+    }
+
+    private void SaveLogConfig()
+    {
+        LogConfig.FolderName = FolderName;
+        LogConfig.FileName = FileName;
+        LogConfig.QuickLogPeriod = QuickLogPeriod;
+        LogConfig.SlowLogPeriod = SlowLogPeriod;
+        LogConfig.FileType = ExportLogTypes;
+        AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
+        Logger.LogInformation("LogConfig saved.");
+    }
+
+    private void SelectFolder(MouseEventArgs obj)
+    {
+        Logger.LogInformation("SelectFolder");
+    }
+
+}

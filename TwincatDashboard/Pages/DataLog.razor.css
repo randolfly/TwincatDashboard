@@ -1,0 +1,12 @@
+﻿.flex-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* flex-flow: row nowrap; */
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: stretch;
+    height: 100%;
+    width: 100%;
+    gap: 12px;
+}

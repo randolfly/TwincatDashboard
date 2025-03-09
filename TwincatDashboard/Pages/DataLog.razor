@@ -1,0 +1,401 @@
+﻿@inject IAdsComService AdsComService
+@inject ILogDataService LogDataService
+@inject ILogger<DataLog> Logger
+@page "/DataLog"
+@using System.Diagnostics
+@using FuzzySharp
+@using TwinCAT.Ads
+@using TwinCAT.Ads.TypeSystem
+@using TwincatDashboard.Models
+@using TwincatDashboard.Services.IService
+@using TwincatDashboard.Services
+@using TwincatDashboard.Utils
+<div style="height: 100vh; padding-bottom: 8px">
+    <MTabs FixedTabs Style="height: 100%">
+        <MTab>Select Symbols</MTab>
+        <MTab>Log and Plot Symbols</MTab>
+        <MTabItem>
+            <MCard Class="overflow-auto">
+                <MCardTitle>
+                    <div class="flex-container">
+                        <div>Available Symbols</div>
+                        <div>
+                            <MTooltip Bottom>
+                                <ActivatorContent>
+                                    <MButton @attributes="@context.Attrs"
+                                             Color="primary"
+                                             OnClick="GetAvailableSymbols"
+                                             Icon>
+                                        <MIcon>mdi-refresh</MIcon>
+                                    </MButton>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <span>get ads symbols</span>
+                                </ChildContent>
+                            </MTooltip>
+                        </div>
+                        <div style="flex-grow: 1;" Class="mx-2; mt-n2">
+                            <MTextField @bind-Value="_searchAvailableSymbolName"
+                                        AppendIcon="mdi-magnify"
+                                        Label="Search"
+                                        SingleLine
+                                        HideDetails="true"></MTextField>
+                        </div>
+                    </div>
+                </MCardTitle>
+                @if (_availableSymbols.Count == 0)
+                {
+                    <div>
+                        <MCardText>
+                            No available symbols, Update the list by clicking the refresh button
+                        </MCardText>
+                    </div>
+                }
+                else
+                {
+                    <MDataTable Headers="_availableSymbolHeaders"
+                                Items="_availableSymbols"
+                                ItemKey="s=>s.Name"
+                                Search="@_searchAvailableSymbolName"
+                                CustomFilter="FilterSymbolBySimilarityScore"
+                                ResizeMode="DataTableResizeMode.Auto"
+                                Dense>
+                        <ItemColContent>
+                            @switch (context.Header.Value)
+                            {
+                                case nameof(SymbolInfo.IsLog):
+                                    <MSimpleCheckbox @bind-Value="context.Item.IsLog"/>
+                                    break;
+                                case nameof(SymbolInfo.IsPlot):
+                                    <MSimpleCheckbox @bind-Value="context.Item.IsPlot"/>
+                                    break;
+                                default:
+                                    @context.Value
+                                    break;
+                            }
+                        </ItemColContent>
+                    </MDataTable>
+                }
+            </MCard>
+        </MTabItem>
+        <MTabItem>
+            <MCard Class="overflow-auto">
+                <MCardTitle>
+                    <div class="flex-container">
+                        <div>Log Symbols</div>
+                        <div style="flex-grow: 1;" Class="mx-2; mt-n2">
+                            <MTextField @bind-Value="_searchLogSymbolName"
+                                        AppendIcon="mdi-magnify"
+                                        Label="Search"
+                                        SingleLine
+                                        HideDetails="true"></MTextField>
+                        </div>
+                        <div>
+                            <MDialog MaxWidth="500">
+                                <ActivatorContent Context="dialogCtx">
+                                    <MButton @attributes="dialogCtx.Attrs" Color="primary" Icon>
+                                        <MTooltip Bottom>
+                                            <ActivatorContent Context="tooltipCtx">
+                                                <MIcon @attributes="tooltipCtx.Attrs">mdi-wrench</MIcon>
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                <span>open log config</span>
+                                            </ChildContent>
+                                        </MTooltip>
+                                    </MButton>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MCard>
+                                        <MCardText>
+                                            <div class="text-h6">Log Config</div>
+                                        </MCardText>
+                                        <MDivider/>
+                                        <LogSetting/>
+                                    </MCard>
+                                </ChildContent>
+                            </MDialog>
+                        </div>
+                        <div>
+                            <MTooltip Bottom>
+                                <ActivatorContent>
+                                    <MSwitch @bind-Value="StartLogging"
+                                             LeftIcon="mdi-stop"
+                                             RightIcon="mdi-play"
+                                             Label="@(StartLogging ? "Logging Now" : "Not Logging")"
+                                             Color="primary accent-3"
+                                             TrackColor="#E5E6EB">
+                                    </MSwitch>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <span>start/stop log</span>
+                                </ChildContent>
+                            </MTooltip>
+                        </div>
+                    </div>
+                </MCardTitle>
+                @if (LogSymbols.Count == 0)
+                {
+                    <div>
+                        <MCardText>
+                            No log symbols selected, Update the list by selecting symbols from the available symbols
+                        </MCardText>
+                    </div>
+                }
+                else
+                {
+                    <MDataTable Headers="_logSymbolHeaders"
+                                Items="LogSymbols"
+                                ItemKey="s=>s.Name"
+                                Search="@_searchLogSymbolName"
+                                CustomFilter="FilterSymbolBySimilarityScore"
+                                ResizeMode="DataTableResizeMode.Auto"
+                                Dense>
+                        <ItemColContent>
+                            @switch (context.Header.Value)
+                            {
+                                case nameof(SymbolInfo.IsPlot):
+                                    <MSimpleCheckbox @bind-Value="context.Item.IsPlot"/>
+                                    break;
+                                case nameof(SymbolInfo.IsQuickLog):
+                                    <MSimpleCheckbox @bind-Value="context.Item.IsQuickLog"/>
+                                    break;
+                                case nameof(SymbolInfo.IsLog):
+                                    <MSimpleCheckbox @bind-Value="context.Item.IsLog"/>
+                                    break;
+                                default:
+                                    @context.Value
+                                    break;
+                            }
+                        </ItemColContent>
+                    </MDataTable>
+                }
+            </MCard>
+        </MTabItem>
+    </MTabs>
+</div>
+
+@code {
+    private LogConfig _logConfig = new();
+
+    private bool _startLogging = false;
+
+    public bool StartLogging
+    {
+        get => _startLogging;
+        set
+        {
+            if (value)
+            {
+                _startLogging = StartLog();
+            }
+            else
+            {
+                _startLogging = !Task.Run(StopLogAsync).Result;
+            }
+        }
+    }
+
+    private string? _searchAvailableSymbolName;
+    private string? _searchLogSymbolName;
+
+    private List<SymbolInfo> _availableSymbols = [];
+    private List<SymbolInfo> LogSymbols => _availableSymbols.Where(x => x.IsLog).ToList();
+    public List<SymbolInfo> PlotSymbols => _availableSymbols.Where(x => x.IsPlot).ToList();
+    public List<SymbolInfo> QuickLogSymbols => LogSymbols.Where(x => x.IsQuickLog).ToList();
+    public List<SymbolInfo> SlowLogSymbols => LogSymbols.Where(x => x.IsSlowLog).ToList();
+
+    private Dictionary<uint, SymbolInfo> _symbolsDict = [];
+    private bool _isFirstGetAvailableSymbols = true;
+
+    #region UI Params
+
+    private readonly List<DataTableHeader<SymbolInfo>> _availableSymbolHeaders =
+    [
+        new() { Text = "Log", Value = nameof(SymbolInfo.IsLog), Filterable = false },
+        new() { Text = "Name", Value = nameof(SymbolInfo.Name), Filterable = false },
+        new() { Text = "Path", Value = nameof(SymbolInfo.Path), Filterable = false },
+        new() { Text = "Type", Value = nameof(SymbolInfo.Type), Filterable = false },
+    ];
+
+    private readonly List<DataTableHeader<SymbolInfo>> _logSymbolHeaders =
+    [
+        new() { Text = "Log", Value = nameof(SymbolInfo.IsLog), Filterable = false },
+        new() { Text = "QuickLog", Value = nameof(SymbolInfo.IsQuickLog), Filterable = false },
+        new() { Text = "Plot", Value = nameof(SymbolInfo.IsPlot), Filterable = false },
+        new() { Text = "Name", Value = nameof(SymbolInfo.Name), Filterable = false },
+        new() { Text = "Path", Value = nameof(SymbolInfo.Path), Filterable = false },
+        new() { Text = "Type", Value = nameof(SymbolInfo.Type), Filterable = false },
+    ];
+
+    #endregion
+
+    protected override void OnInitialized()
+    {
+        _logConfig = AppConfigService.AppConfig.LogConfig;
+    }
+
+    private void GetAvailableSymbols()
+    {
+        if (AdsComService.GetAdsState() == AdsState.Invalid)
+        {
+            Logger.LogInformation("Ads server is not connected");
+            return;
+        }
+
+        _availableSymbols = AdsComService.GetAvailableSymbols();
+        _availableSymbols.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+        Logger.LogInformation("Available symbols: {0}", _availableSymbols.Count);
+
+        if (!_isFirstGetAvailableSymbols) return;
+        // Set default log symbols by checking the config
+        _availableSymbols.AsParallel().ForAll(symbol =>
+        {
+            if (_logConfig.LogSymbols.Contains(symbol.Name))
+            {
+                symbol.IsLog = true;
+                if (_logConfig.QuickLogSymbols.Contains(symbol.Name))
+                {
+                    symbol.IsQuickLog = true;
+                }
+            }
+
+            if (_logConfig.PlotSymbols.Contains(symbol.Name))
+            {
+                symbol.IsPlot = true;
+            }
+        });
+        _isFirstGetAvailableSymbols = false;
+    }
+
+    /// <summary>
+    /// start logging
+    /// </summary>
+    /// <returns>true->start log successfully, false->error</returns>
+    private bool StartLog()
+    {
+        ExportLogConfig();
+        if (LogSymbols.Count == 0)
+        {
+            Logger.LogInformation("No log symbols selected");
+            return false;
+        }
+
+        _symbolsDict.Clear();
+        LogDataService.RemoveAllChannels();
+        // slow log symbols
+
+        // quick log symbols
+        foreach (var symbol in QuickLogSymbols)
+        {
+            Logger.LogInformation("Start quick log: {0}", symbol.Name);
+            var notificationHandle = AdsComService.AddDeviceNotification(
+                symbol.Symbol.InstancePath,
+                symbol.Symbol.ByteSize,
+                new NotificationSettings(AdsTransMode.Cyclic,
+                    AppConfigService.AppConfig.LogConfig.QuickLogPeriod, 0));
+            _symbolsDict.Add(notificationHandle, symbol);
+            LogDataService.AddChannel(symbol.Name);
+        }
+        // plot symbols
+
+        AdsComService.AddNotificationHandler(AdsNotificationHandler);
+        return true;
+    }
+
+    /// <summary>
+    /// stop logging
+    /// </summary>
+    /// <returns>true->stop log successfullym, false->error</returns>
+    private async Task<bool> StopLogAsync()
+    {
+        AdsComService.RemoveNotificationHandler(AdsNotificationHandler);
+        _symbolsDict.Keys.ToList().ForEach(handle =>
+            AdsComService.RemoveDeviceNotification(handle));
+        _symbolsDict.Clear();
+
+        // load data from tmp folder
+        var logResult = await LogDataService.LoadAllChannelsAsync();
+        LogDataService.DeleteTmpFiles();
+        // export
+        await LogDataService.ExportDataAsync(logResult, _logConfig.FileFullName, _logConfig.FileType);
+        // plot
+        // _logPlotService.ShowAllChannelsWithNewData(logResult, _logConfig.Period);
+        return true;
+    }
+
+    private void ExportLogConfig()
+    {
+        _logConfig.LogSymbols = LogSymbols.Select(s => s.Name).ToList();
+        _logConfig.QuickLogSymbols = QuickLogSymbols.Select(s => s.Name).ToList();
+        _logConfig.PlotSymbols = PlotSymbols.Select(s => s.Name).ToList();
+        AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
+    }
+
+    private async void AdsNotificationHandler(object? sender, AdsNotificationEventArgs e)
+    {
+        try
+        {
+            if (!_symbolsDict.TryGetValue(e.Handle, out var symbol))
+            {
+                Logger.LogWarning("Symbol not found for handle: {0}", e.Handle);
+                return;
+            }
+
+            var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
+            if (dataType == null)
+            {
+                Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.Name);
+                return;
+            }
+
+            object data;
+            try
+            {
+                data = SpanConverter.ConvertTo(e.Data.Span, dataType);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error converting data for symbol: {0}, Exception: {1}", symbol.Name, ex);
+                return;
+            }
+
+            var result = data switch
+            {
+                bool b => b ? 1.0 : 0.0,
+                byte b => b,
+                sbyte sb => sb,
+                short s => s,
+                ushort us => us,
+                int i => i,
+                uint ui => ui,
+                long l => l,
+                ulong ul => ul,
+                float f => f,
+                double d => d,
+                _ => throw new InvalidCastException($"Unsupported data type: {dataType}")
+            };
+
+            await LogDataService.AddDataAsync(symbol.Name, result);
+            // _logPlotService.AddData(symbol.Name, result);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Error in AdsNotificationHandler");
+        }
+    }
+
+
+    public static IEnumerable<SymbolInfo> FilterSymbolBySimilarityScore(IEnumerable<SymbolInfo> items, IEnumerable<ItemValue<SymbolInfo>> itemValues, string? search)
+    {
+        if (string.IsNullOrEmpty(search)) return items;
+        var searchResults = items
+            .OrderByDescending(s => GetSimilarityScore(search, s));
+        return searchResults;
+    }
+
+    private static int GetSimilarityScore(string searchText, SymbolInfo symbolInfo)
+    {
+        return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.Name.ToLower());
+    }
+
+}

@@ -1,0 +1,32 @@
+﻿@page "/"
+@inject ILogger<Index> TestLogger
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<MTooltip Bottom>
+    <ActivatorContent>
+        <MButton Dark Color="primary"
+                 OnClick="TestClick"
+                 @attributes="@context.Attrs">Bottom
+        </MButton>
+    </ActivatorContent>
+    <ChildContent>
+        <span>Tooltip</span>
+    </ChildContent>
+</MTooltip>
+
+
+<SurveyPrompt Title="This is fire-new Blazor UI!"/>
+
+@code
+{
+
+    private void TestClick(MouseEventArgs obj)
+    {
+        TestLogger.LogInformation("TestClick");
+    }
+}

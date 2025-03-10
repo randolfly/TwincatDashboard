@@ -1,5 +1,6 @@
 ﻿@inject ILogger<LogSetting> Logger
 @inject IAdsComService AdsComService
+@using Microsoft.Win32
 @using TwincatDashboard.Constants
 @using TwincatDashboard.Models
 @using TwincatDashboard.Services
@@ -102,6 +103,15 @@
 
     private void SelectFolder(MouseEventArgs obj)
     {
+        var folderDialog = new OpenFolderDialog
+        {
+            Title = "Select Folder",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        };
+
+        if (folderDialog.ShowDialog() != true) return;
+        FolderName = folderDialog.FolderName;
+        LogConfig.FolderName = FolderName;
         Logger.LogInformation("SelectFolder");
     }
 

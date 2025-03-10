@@ -222,6 +222,7 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
 
     public async Task<int> GetTaskCycleTimeAsync()
     {
+        if (!IsAdsConnected) return 1;
         var cycleTime = await ReadPlcSymbolValueAsync(AdsConstants.TaskCycleTimeName, typeof(uint)) as uint?;
         return cycleTime switch
         {

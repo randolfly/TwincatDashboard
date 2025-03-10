@@ -55,7 +55,6 @@
                                 </ChildContent>
                             </MTooltip>
                         </MCol>
-
                         <MCol Cols="3">
                             <MTooltip Bottom>
                                 <ActivatorContent>
@@ -68,7 +67,6 @@
                                 </ChildContent>
                             </MTooltip>
                         </MCol>
-
                         <MCol Cols="3">
                             <MDialog MaxWidth="500">
                                 <ActivatorContent Context="dialogCtx">
@@ -100,30 +98,17 @@
                 <MDivider/>
             </MCard>
             <MList Nav Dense Routable>
-                <MListItem Href="/">
-                    <MListItemIcon>
-                        <MIcon>mdi-home</MIcon>
-                    </MListItemIcon>
-                    <MListItemContent>
-                        <MListItemTitle>DataLog</MListItemTitle>
-                    </MListItemContent>
-                </MListItem>
-                <MListItem Href="/dashboard" ActiveClass="primary--text">
-                    <MListItemIcon>
-                        <MIcon>mdi-plus</MIcon>
-                    </MListItemIcon>
-                    <MListItemContent>
-                        <MListItemTitle>Dashboard</MListItemTitle>
-                    </MListItemContent>
-                </MListItem>
-                <MListItem Href="/experiment" ActiveClass="primary--text">
-                    <MListItemIcon>
-                        <MIcon>mdi-list-box</MIcon>
-                    </MListItemIcon>
-                    <MListItemContent>
-                        <MListItemTitle>Experiment</MListItemTitle>
-                    </MListItemContent>
-                </MListItem>
+                @foreach (var item in _navItems)
+                {
+                    <MListItem Href="@item.Href" ActiveClass="primary--text">
+                        <MListItemIcon>
+                            <MIcon>@item.Icon</MIcon>
+                        </MListItemIcon>
+                        <MListItemContent>
+                            <MListItemTitle>@item.Name</MListItemTitle>
+                        </MListItemContent>
+                    </MListItem>
+                }
             </MList>
             <MDivider/>
         </ChildContent>
@@ -158,6 +143,14 @@
 </MApp>
 
 @code {
+
+    private readonly List<NavItem> _navItems =
+    [
+        new() { Name = "DataLog", Icon = "mdi-home", Href = "/" },
+        new() { Name = "Dashboard", Icon = "mdi-plus", Href = "/dashboard" },
+        new() { Name = "Experiment", Icon = "mdi-list-box", Href = "/experiment" }
+    ];
+
     public string AdsStateText { get; set; } = "Invalid";
     public string NetId { get; set; } = string.Empty;
     public int PortId { get; set; } = 851;
@@ -209,6 +202,13 @@
     {
         SelectedAdsRoute = adsRoute;
         NetId = SelectedAdsRoute.NetId;
+    }
+
+    record NavItem
+    {
+        public required string Name { get; set; }
+        public required string Icon { get; set; }
+        public required string Href { get; set; }
     }
 
 }

@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
         <RootNamespace>TwincatDashboard</RootNamespace>
+        <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>

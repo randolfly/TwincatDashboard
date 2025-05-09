@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Input;
 using ScottPlot;
 using ScottPlot.Plottables;
 using Timer = System.Timers.Timer;
@@ -125,4 +126,10 @@ public partial class LogPlotWindow : Window, IDisposable
     }
 
     public void Dispose() => _updatePlotTimer.Dispose();
+
+    private void Window_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        var window = (Window)sender;
+        window.Topmost = true;
+    }
 }

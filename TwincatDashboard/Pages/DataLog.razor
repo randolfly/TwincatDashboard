@@ -121,7 +121,7 @@
                                     <MSwitch @bind-Value="StartLogging"
                                              LeftIcon="mdi-stop"
                                              RightIcon="mdi-play"
-                                             Label="@(StartLogging ? "Logging Now" : "Not Logging")"
+                                             Label="@(StartLogging ? "Logging On" : "Logging Off")"
                                              Color="primary accent-3"
                                              TrackColor="#E5E6EB">
                                     </MSwitch>
@@ -130,6 +130,18 @@
                                     <span>start/stop log</span>
                                 </ChildContent>
                             </MTooltip>
+                        </div>
+                        <div>
+                            <MButton Color="primary" Icon OnClick="CloseAllPlotWindows">
+                            <MTooltip Bottom>
+                                <ActivatorContent Context="tooltipCtx">
+                                    <MIcon @attributes="tooltipCtx.Attrs">mdi-close-circle</MIcon>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <span>close all plot windows</span>
+                                </ChildContent>
+                            </MTooltip>
+                            </MButton>
                         </div>
                     </div>
                 </MCardTitle>
@@ -456,6 +468,12 @@
     private static int GetSimilarityScore(string searchText, SymbolInfo symbolInfo)
     {
         return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.FullName.ToLower());
+    }
+
+    private void CloseAllPlotWindows(MouseEventArgs obj)
+    {
+        if (StartLogging) return;
+        LogPlotService.RemoveAllChannels();
     }
 
 }

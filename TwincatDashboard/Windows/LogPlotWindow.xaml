@@ -7,7 +7,7 @@
         xmlns:wpf="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d" Topmost="True"
         PreviewLostKeyboardFocus="Window_PreviewLostKeyboardFocus"
-        Title="LogPlotWindow" Height="200" Width="400">
+        Title="LogPlotWindow" Height="300" Width="400">
     <Grid>
         <wpf:WpfPlot x:Name="LogPlot" />
     </Grid>

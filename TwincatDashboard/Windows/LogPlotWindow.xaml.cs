@@ -23,7 +23,7 @@ public partial class LogPlotWindow : Window, IDisposable
         Title = LogName;
         // will cause const data flow not render!
         //LogPlot.Plot.Axes.ContinuouslyAutoscale = true;
-        LogPlot.Plot.ScaleFactor = 1.0;
+        LogPlot.Plot.ScaleFactor = 1.5;
 
         _dataStreamer = LogPlot.Plot.Add.DataStreamer(logNum);
         _dataStreamer.ViewScrollLeft();
@@ -101,7 +101,7 @@ public partial class LogPlotWindow : Window, IDisposable
         {
             var currentPosition = e.GetPosition(LogPlot);
             // determine where the mouse is and get the nearest point
-            Pixel mousePixel = new(currentPosition.X, currentPosition.Y);
+            Pixel mousePixel = new(currentPosition.X * LogPlot.DisplayScale, currentPosition.Y * LogPlot.DisplayScale);
             var mouseLocation = LogPlot.Plot.GetCoordinates(mousePixel);
             var nearest = _fullDataSignal.Data.GetNearest(mouseLocation,
                 LogPlot.Plot.LastRender);

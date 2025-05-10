@@ -36,10 +36,11 @@
                     Type="number" Suffix="ms"
                     NumberProps="@(prop =>
                                  {
-                                     prop.Min = 2000;
-                                     prop.Max = 10000;
+                                     prop.Min = SlowLogPeriodMin;
+                                     prop.Max = SlowLogPeriodMax;
                                      prop.Step = 500;
                                  })"
+                    Rules="[_numberRule]"
                     HideDetails="@("auto")"
                     @bind-Value="SlowLogPeriod"/>
     </div>
@@ -76,9 +77,15 @@
     public int QuickLogPeriod { get; set; } = 2;
     public int SlowLogPeriod { get; set; } = 5000;
     public List<string> ExportLogTypes = ["mat"];
+    
+    private const int SlowLogPeriodMin = 2000;
+    private const int SlowLogPeriodMax = 10000;
 
+    private Func<int, StringBoolean> _numberRule = value => value is >= SlowLogPeriodMin and <= SlowLogPeriodMax ? true : "Must between 2000 and 10000";
+    
     private LogConfig LogConfig { get; set; } = AppConfigService.AppConfig.LogConfig;
 
+    
     protected override async Task OnInitializedAsync()
     {
         FolderName = LogConfig.FolderName;

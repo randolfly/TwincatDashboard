@@ -23,7 +23,7 @@ public partial class LogPlotWindow : Window, IDisposable
         Title = LogName;
         // will cause const data flow not render!
         //LogPlot.Plot.Axes.ContinuouslyAutoscale = true;
-        LogPlot.Plot.ScaleFactor = 1.5;
+        LogPlot.Plot.ScaleFactor = 1.0;
 
         _dataStreamer = LogPlot.Plot.Add.DataStreamer(logNum);
         _dataStreamer.ViewScrollLeft();

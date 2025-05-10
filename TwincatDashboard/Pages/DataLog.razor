@@ -33,11 +33,16 @@
               </MTooltip>
             </div>
             <div style="flex-grow: 1;" Class="mx-2; mt-n2">
-              <MTextField @bind-Value="_searchAvailableSymbolName"
-                          AppendIcon="mdi-magnify"
-                          Label="Search"
-                          SingleLine
-                          HideDetails="true"></MTextField>
+              <MInputsFilter OnFieldChanged="OnSearchAvailableSymbolNameChanged">
+                <MTextField @bind-Value="_searchAvailableSymbolTmpName"
+                            AppendIcon="mdi-magnify"
+                            Label="Search"
+                            SingleLine
+                            PersistentPlaceholder
+                            Placeholder="Press enter to trigger search action"
+                            Clearable
+                            HideDetails="true"></MTextField>
+              </MInputsFilter>
             </div>
           </div>
         </MCardTitle>
@@ -84,11 +89,17 @@
           <div class="flex-container">
             <div>Log Symbols</div>
             <div style="flex-grow: 1;" Class="mx-2; mt-n2">
-              <MTextField @bind-Value="_searchLogSymbolName"
-                          AppendIcon="mdi-magnify"
-                          Label="Search"
-                          SingleLine
-                          HideDetails="true"></MTextField>
+              <MInputsFilter OnFieldChanged="OnSearchLogSymbolNameChanged">
+                <MTextField @bind-Value="_searchLogSymbolTmpName"
+                            AppendIcon="mdi-magnify"
+                            Label="Search"
+                            SingleLine
+                            PersistentPlaceholder
+                            Placeholder="Press enter to trigger search action"
+                            Clearable
+                            HideDetails="true"></MTextField>
+              </MInputsFilter>
+
             </div>
             <div>
               <MDialog MaxWidth="500">
@@ -211,7 +222,10 @@
   }
 
   private string? _searchAvailableSymbolName;
+  private string? _searchAvailableSymbolTmpName;
   private string? _searchLogSymbolName;
+  private string? _searchLogSymbolTmpName;
+
 
   private List<SymbolInfo> _availableSymbols = [];
   private List<SymbolInfo> LogSymbols => _availableSymbols.Where(x => x.IsLog).ToList();
@@ -474,6 +488,21 @@
   {
     if (StartLogging) return;
     LogPlotService.RemoveAllChannels();
+  }
+
+  /// <summary>
+  /// Just used for trigger MDataTable Search Action
+  /// </summary>
+  /// <param name="obj"></param>
+  private void OnSearchLogSymbolNameChanged(InputsFilterFieldChangedEventArgs obj)
+  {
+    // StateHasChanged();
+    _searchLogSymbolName = _searchLogSymbolTmpName;
+  }
+
+  private void OnSearchAvailableSymbolNameChanged(InputsFilterFieldChangedEventArgs obj)
+  {
+    _searchAvailableSymbolName = _searchAvailableSymbolTmpName;
   }
 
 }

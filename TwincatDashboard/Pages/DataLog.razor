@@ -4,9 +4,11 @@
 @inject ILogger<DataLog> Logger
 @page "/"
 @using System.Timers
+@using System.Diagnostics
 @using FuzzySharp
 @using TwinCAT.Ads
 @using TwinCAT.Ads.TypeSystem
+@using Process = System.Diagnostics.Process
 
 <div style="height: 100vh; padding-bottom: 8px">
   <MTabs FixedTabs Style="height: 100%">
@@ -117,8 +119,22 @@
                 </ActivatorContent>
                 <ChildContent>
                   <MCard>
-                    <MCardText>
-                      <div class="text-h6">Log Config</div>
+                    <MCardText Style="padding: 8px">
+                      <div style="display: flex; flex-direction: row; gap: 12px; align-items: center; padding-top: 4px">
+                        <div class="text-h6" style="flex-grow: 1;">Log Config</div>
+                        <div>
+                          <MButton Color="primary" Icon OnClick="OpenConfigFolder">
+                            <MTooltip Bottom>
+                              <ActivatorContent Context="tooltipCtx">
+                                <MIcon @attributes="tooltipCtx.Attrs">mdi-folder</MIcon>
+                              </ActivatorContent>
+                              <ChildContent>
+                                <span>open config folder</span>
+                              </ChildContent>
+                            </MTooltip>
+                          </MButton>
+                        </div>
+                      </div>
                     </MCardText>
                     <MDivider/>
                     <LogSetting/>
@@ -503,6 +519,15 @@
   private void OnSearchAvailableSymbolNameChanged(InputsFilterFieldChangedEventArgs obj)
   {
     _searchAvailableSymbolName = _searchAvailableSymbolTmpName;
+  }
+
+  private void OpenConfigFolder(MouseEventArgs obj)
+  {
+    Process.Start(new ProcessStartInfo
+    {
+      FileName = AppConfig.FolderName,
+      UseShellExecute = true
+    });
   }
 
 }

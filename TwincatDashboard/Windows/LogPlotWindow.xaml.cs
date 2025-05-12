@@ -65,8 +65,8 @@ public partial class LogPlotWindow : Window, IDisposable
         var screenWidth = SystemParameters.PrimaryScreenWidth;
         var screenHeight = SystemParameters.PrimaryScreenHeight;
         var windowRowSize = (int)(screenHeight / Height);
-        var left = (int)screenWidth - (windowId / windowRowSize + 1) * (int)Width;
-        var top = (int)screenHeight - (windowId % windowRowSize + 1) * (int)Height;
+        var left = (int)(windowId / windowRowSize) * (int)Width;
+        var top = (int)(windowId % windowRowSize) * (int)Height;
         Left = left;
         Top = top;
     }

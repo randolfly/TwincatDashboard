@@ -1,6 +1,7 @@
 ﻿@inject IAdsComService AdsComService
 
 @using System.Diagnostics
+@using TwinCAT.Ads
 @using TwincatDashboard.Models
 @using TwincatDashboard.Services
 @using TwincatDashboard.Services.IService
@@ -113,7 +114,7 @@
     </ChildContent>
 
     <AppendContent>
-      <MBorder>
+      <MBorder Color="@AdsStateColor">
         <MCard Outlined>
           <MCardTitle>AdsState</MCardTitle>
           <MCardSubtitle>@AdsStateText</MCardSubtitle>
@@ -151,6 +152,7 @@
   ];
 
   public string AdsStateText { get; set; } = "Invalid";
+  public string AdsStateColor = "#607D8B";
   public string NetId { get; set; } = string.Empty;
   public int PortId { get; set; } = 851;
 
@@ -178,7 +180,15 @@
 
   private void CheckAdsState()
   {
-    AdsStateText = AdsComService.GetAdsState().ToString();
+    var adsState = AdsComService.GetAdsState();
+    AdsStateText = adsState.ToString();
+    AdsStateColor = adsState switch
+    {
+      AdsState.Invalid => "#607D8B",//grey
+      AdsState.Stop => "#4CAF50",//green
+      AdsState.Run => "#2196F3",//blue
+      _ => "#F44336"//red
+    };
     Log.Information($"Ads server state: {AdsComService.GetAdsState()}");
   }
 

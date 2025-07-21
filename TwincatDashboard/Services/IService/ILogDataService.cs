@@ -28,6 +28,7 @@ public interface ILogDataService
         string fileName,
         List<string> exportTypes
     );
+
     public void DeleteTmpFiles();
 }
 
@@ -128,7 +129,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         }
 
         // get file lines number
-        var fileData = File.ReadLines(FilePath).ToList();
+        var fileData = await File.ReadAllLinesAsync(FilePath);
         var arrayLength = fileData.Count();
         var data = ArrayPool.Rent(arrayLength);
         for (int i = 0; i < arrayLength; i++)
@@ -142,6 +143,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
                 data[i] = 0;
             }
         }
+
         return data;
     }
 

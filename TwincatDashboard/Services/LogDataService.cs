@@ -84,8 +84,11 @@ public class LogDataService : ILogDataService
     /// <param name="fileName">export file full name, doesn't contain suffix, such as "c:/FOLDER/aaa"</param>
     /// <param name="exportTypes"></param>
     /// <returns></returns>
-    public async Task ExportDataAsync(Dictionary<string, List<double>> dataSrc, string fileName,
-        List<string> exportTypes)
+    public async Task ExportDataAsync(
+        Dictionary<string, List<double>> dataSrc,
+        string fileName,
+        List<string> exportTypes
+    )
     {
         if (exportTypes.Contains("csv"))
         {
@@ -111,10 +114,18 @@ public class LogDataService : ILogDataService
             var exportMatDict = new Dictionary<string, Matrix<double>>();
             foreach (var keyValuePair in dataSrc)
             {
-                exportMatDict.Add(keyValuePair.Key
-                        .Replace("TwinCAT_SystemInfoVarList._TaskInfo[1].", "Task")
-                        .Replace(".", "_"),
-                    Matrix<double>.Build.Dense(keyValuePair.Value.Count, 1, keyValuePair.Value.ToArray()));
+                exportMatDict.Add(
+                    keyValuePair
+                        .Key.Replace("TwinCAT_SystemInfoVarList._TaskInfo[1].", "Task")
+                        .Replace(".", "_")
+                        .Replace("[", "_")
+                        .Replace("]", "_"),
+                    Matrix<double>.Build.Dense(
+                        keyValuePair.Value.Count,
+                        1,
+                        keyValuePair.Value.ToArray()
+                    )
+                );
             }
 
             await Task.Run(() => MatlabWriter.Write(fileName + ".mat", exportMatDict));

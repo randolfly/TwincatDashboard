@@ -1,5 +1,4 @@
 ﻿@inject IAdsComService AdsComService
-@inject ILogger<MainLayout> Logger
 
 @using System.Diagnostics
 @using TwincatDashboard.Models
@@ -180,7 +179,7 @@
   private void CheckAdsState()
   {
     AdsStateText = AdsComService.GetAdsState().ToString();
-    Logger.LogInformation($"Ads server state: {AdsComService.GetAdsState()}");
+    Log.Information($"Ads server state: {AdsComService.GetAdsState()}");
   }
 
   private async Task DisConnectAdsServerAsync()

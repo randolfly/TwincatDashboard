@@ -8,17 +8,17 @@
 <MButton OnClick="ReadSymbol">Read Symbol</MButton>
 
 @code {
-    public string PlcSymbolName { get; set; }
-    public string PlcSymbolType { get; set; }
-    public double PlcSymbolValue { get; set; } = 0.0;
+  public required string PlcSymbolName { get; set; }
+  public required string PlcSymbolType { get; set; }
+  public double PlcSymbolValue { get; set; } = 0.0;
 
-    private async Task ReadSymbol(MouseEventArgs arg)
-    {
-        var type = Type.GetType(PlcSymbolType);
-        if (type is null) return;
-        var value = await AdsComService.ReadPlcSymbolValueAsync(PlcSymbolName, type);
-        if (value is null) return;
-        PlcSymbolValue = SymbolExtension.ConvertObjectToDouble(value, type);
-    }
+  private async Task ReadSymbol(MouseEventArgs arg)
+  {
+    var type = Type.GetType(PlcSymbolType);
+    if (type is null) return;
+    var value = await AdsComService.ReadPlcSymbolValueAsync(PlcSymbolName, type);
+    if (value is null) return;
+    PlcSymbolValue = SymbolExtension.ConvertObjectToDouble(value, type);
+  }
 
 }

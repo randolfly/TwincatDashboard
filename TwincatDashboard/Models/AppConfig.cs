@@ -23,6 +23,11 @@ public class AppConfig
     public static string FileName => AppName + ".json";
     public static string ConfigFileFullName => Path.Combine(FolderName, FileName);
 
+    public static string AppLogFileFullName => Path.Combine(
+        FolderName,
+        "log",
+        AppName + "_log_" + ".txt"
+    );
     #endregion
 }
 

@@ -1,6 +1,7 @@
 ﻿@inject ILogger<LogSetting> Logger
 @inject IAdsComService AdsComService
 @using Microsoft.Win32
+@using OneOf.Types
 @using TwincatDashboard.Constants
 @using TwincatDashboard.Models
 @using TwincatDashboard.Services
@@ -78,7 +79,7 @@
   private const int SlowLogPeriodMin = 2000;
   private const int SlowLogPeriodMax = 10000;
 
-  private Func<int, StringBoolean> _numberRule = value => value is >= SlowLogPeriodMin and <= SlowLogPeriodMax ? true : "Must between 2000 and 10000";
+  private Func<int, StringBoolean> _numberRule = value => value is >= SlowLogPeriodMin and <= SlowLogPeriodMax  ? true : "Must between 2000 and 10000";
 
   private LogConfig LogConfig { get; set; } = AppConfigService.AppConfig.LogConfig;
 

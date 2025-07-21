@@ -29,9 +29,6 @@ public partial class MainWindow : Window
             .Filter.ByExcluding(c =>
                 c.Properties.ContainsKey("Microsoft") || c.Properties.ContainsKey("System")
             )
-            .WriteTo.Debug(
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
-            )
             .WriteTo.File(
                 AppConfig.AppLogFileFullName,
                 encoding: Encoding.UTF8,

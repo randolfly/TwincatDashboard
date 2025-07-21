@@ -81,8 +81,7 @@ public partial class LogPlotWindow : Window, IDisposable
         _updatePlotTimer.Stop();
         LogPlot.Plot.Clear();
         //LogPlot.Plot.Axes.ContinuouslyAutoscale = false;
-        var xs = Enumerable.Range(0, ys.Length)
-            .Select(x => x * sampleTime).ToArray();
+        var xs = Enumerable.Range(0, ys.Length).Select(x => x * sampleTime).ToArray();
         LogPlot.Plot.Add.Palette = new ScottPlot.Palettes.Nord();
         _fullDataSignal = LogPlot.Plot.Add.SignalXY(xs, ys);
 

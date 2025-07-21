@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using TwincatDashboard.Models;
 using TwincatDashboard.Utils;
+using Util.Reflection.Expressions;
 
 namespace TwincatDashboard.Services.IService;
 
@@ -16,12 +18,16 @@ public interface ILogDataService
     public Task AddDataAsync(string channelName, double data);
     public void RemoveAllChannels();
     public Task<Dictionary<string, List<double>>> LoadAllChannelsAsync();
-    
+
     public void RegisterSlowLog(string channelName);
     public void AddSlowLogData(string channelName, double data);
     public void RemoveAllSlowLog();
-    
-    public Task ExportDataAsync(Dictionary<string, List<double>> dataSrc, string fileName, List<string> exportTypes);
+
+    public Task ExportDataAsync(
+        Dictionary<string, List<double>> dataSrc,
+        string fileName,
+        List<string> exportTypes
+    );
     public void DeleteTmpFiles();
 }
 
@@ -69,13 +75,21 @@ public class LogDataChannel(int bufferCapacity, string channelName)
             stringBuilder.AppendLine(value.ToString(CultureInfo.InvariantCulture));
         }
 
-        await using var fileStream = new FileStream(filePath,
+        await using var fileStream = new FileStream(
+            filePath,
             FileMode.Append,
             FileAccess.Write,
-            FileShare.None, 4096, true);
+            FileShare.None,
+            4096,
+            true
+        );
         await using var writer = new StreamWriter(fileStream);
         await writer.WriteAsync(stringBuilder.ToString());
     }
+
+    private static ArrayPool<double> ArrayPool => ArrayPool<double>.Shared;
+
+    public static void ReturnArray(double[] doubles) => ArrayPool.Return(doubles);
 
     public async Task<List<double>> LoadFromFileAsync()
     {
@@ -85,10 +99,14 @@ public class LogDataChannel(int bufferCapacity, string channelName)
             return data;
         }
 
-        await using var fileStream = new FileStream(FilePath,
+        await using var fileStream = new FileStream(
+            FilePath,
             FileMode.Open,
             FileAccess.Read,
-            FileShare.Read, 4096, true);
+            FileShare.Read,
+            4096,
+            true
+        );
         using var reader = new StreamReader(fileStream);
         while (await reader.ReadLineAsync() is { } line)
         {
@@ -98,6 +116,32 @@ public class LogDataChannel(int bufferCapacity, string channelName)
             }
         }
 
+        return data;
+    }
+
+    public async Task<double[]> LoadArrayPoolFromFileAsync()
+    {
+        // if file not exists, return empty array pool
+        if (!File.Exists(FilePath))
+        {
+            return ArrayPool.Rent(0);
+        }
+
+        // get file lines number
+        var fileData = File.ReadLines(FilePath).ToList();
+        var arrayLength = fileData.Count();
+        var data = ArrayPool.Rent(arrayLength);
+        for (int i = 0; i < arrayLength; i++)
+        {
+            if (double.TryParse(fileData[i], out var value))
+            {
+                data[i] = value;
+            }
+            else
+            {
+                data[i] = 0;
+            }
+        }
         return data;
     }
 

@@ -33,13 +33,16 @@ public class LogPlotService : ILogPlotService
         }
     }
 
-    public void ShowAllChannelsWithNewData(Dictionary<string, List<double>> dataSrcDict, int sampleTime = 1)
+    public void ShowAllChannelsWithNewData(
+        Dictionary<string, List<double>> dataSrcDict,
+        int sampleTime = 1
+    )
     {
         foreach (var (channelName, data) in dataSrcDict)
         {
             if (PlotDict.TryGetValue(channelName, out var value))
             {
-                value.ShowAllData(data.ToArray(), sampleTime);
+                value.ShowAllData([.. data], sampleTime);
             }
         }
     }

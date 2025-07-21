@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using TwinCAT;
 using TwinCAT.Ads;
 using TwinCAT.Ads.TypeSystem;
@@ -12,10 +13,9 @@ using TwincatDashboard.Services.IService;
 
 namespace TwincatDashboard.Services;
 
-public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
+public class AdsComService() : IAdsComService
 {
     private readonly int _cancelTimeout = 2000;
-    private ILogger<AdsComService> _logger = logger;
     public bool IsAdsConnected => _adsClient.IsConnected;
 
     private readonly AdsClient _adsClient = new();
@@ -45,8 +45,8 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
     {
         var amsAddress = new AmsAddress(adsConfig.NetId, adsConfig.PortId);
         _adsClient.Connect(amsAddress);
-        _logger.LogInformation($"Ads server connected: {adsConfig.NetId}:{adsConfig.PortId}");
-        _logger.LogInformation($"Ads server state: {GetAdsState()}");
+        Log.Information($"Ads server connected: {adsConfig.NetId}:{adsConfig.PortId}");
+        Log.Information($"Ads server state: {GetAdsState()}");
     }
 
     public async Task ConnectAdsServerAsync(AdsConfig adsConfig)
@@ -57,13 +57,13 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         try
         {
             await _adsClient.ConnectAsync(amsAddress, cts.Token);
-            _logger.LogInformation($"Ads server connected: {adsConfig.NetId}:{adsConfig.PortId}");
-            _logger.LogInformation($"Ads server state: {GetAdsState()}");
+            Log.Information($"Ads server connected: {adsConfig.NetId}:{adsConfig.PortId}");
+            Log.Information($"Ads server state: {GetAdsState()}");
         }
         catch (OperationCanceledException e)
         {
             Console.WriteLine(e);
-            _logger.LogError(e, "Connect Ads server timeout");
+            Log.Error(e, "Connect Ads server timeout");
         }
         finally
         {
@@ -85,11 +85,11 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         try
         {
             await _adsClient.DisconnectAsync(cts.Token);
-            _logger.LogInformation($"Ads server state: {GetAdsState()}");
+            Log.Information($"Ads server state: {GetAdsState()}");
         }
         catch (OperationCanceledException e)
         {
-            _logger.LogError(e, "Disconnect Ads server timeout");
+            Log.Error(e, "Disconnect Ads server timeout");
         }
         finally
         {
@@ -168,7 +168,9 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         var varHandle = resultHandle.Handle;
         if (!resultHandle.Succeeded)
         {
-            _logger.LogError($"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}");
+            Log.Error(
+                $"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}"
+            );
             return null;
         }
 
@@ -180,7 +182,7 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Failed to read plc symbol value: {symbolPath}");
+            Log.Error(e, $"Failed to read plc symbol value: {symbolPath}");
         }
         finally
         {
@@ -198,7 +200,9 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         var varHandle = resultHandle.Handle;
         if (!resultHandle.Succeeded)
         {
-            _logger.LogError($"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}");
+            Log.Error(
+                $"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}"
+            );
             return false;
         }
 
@@ -210,7 +214,7 @@ public class AdsComService(ILogger<AdsComService> logger) : IAdsComService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Failed to write plc symbol {symbolPath} with value {value}");
+            Log.Error(e, $"Failed to write plc symbol {symbolPath} with value {value}");
         }
         finally
         {

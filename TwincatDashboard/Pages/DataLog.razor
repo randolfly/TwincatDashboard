@@ -1,7 +1,6 @@
 ﻿@inject IAdsComService AdsComService
 @inject ILogDataService LogDataService
 @inject ILogPlotService LogPlotService
-@inject ILogger<DataLog> Logger
 @page "/"
 @using System.Timers
 @using System.Diagnostics
@@ -292,14 +291,14 @@
       var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
       if (dataType == null)
       {
-        Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.FullName);
+        Log.Warning("ManagedType is null for symbol: {0}", symbol.FullName);
         return;
       }
 
       var value = await AdsComService.ReadPlcSymbolValueAsync(symbol.FullName, dataType);
       if (value is null)
       {
-        Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.FullName);
+        Log.Warning(messageTemplate: "ManagedType is null for symbol: {0}", symbol.FullName);
         return;
       }
 
@@ -312,7 +311,7 @@
   {
     if (AdsComService.GetAdsState() == AdsState.Invalid)
     {
-      Logger.LogInformation("Ads server is not connected");
+      Log.Information("Ads server is not connected");
       return;
     }
 
@@ -332,7 +331,7 @@
     }
 
     _availableSymbols.Sort((a, b) => string.Compare(a.FullName, b.FullName, StringComparison.Ordinal));
-    Logger.LogInformation("Available symbols: {0}", _availableSymbols.Count);
+    Log.Information("Available symbols: {0}", _availableSymbols.Count);
 
     // add default quick log symbol: AdsConstants.TaskCycleCountName
     var taskCycleCountSymbol = _availableSymbols.FirstOrDefault(s => s.FullName == AdsConstants.TaskCycleCountName);
@@ -369,7 +368,7 @@
     ExportLogConfig();
     if (LogSymbols.Count == 0)
     {
-      Logger.LogInformation("No log symbols selected");
+      Log.Information("No log symbols selected");
       return false;
     }
 
@@ -379,7 +378,7 @@
     // slow log symbols: register slow log data
     foreach (var symbol in SlowLogSymbols)
     {
-      Logger.LogInformation("Start slow log: {0}", symbol.FullName);
+      Log.Information("Start slow log: {0}", symbol.FullName);
       LogDataService.RegisterSlowLog(symbol.FullName);
     }
 
@@ -392,7 +391,7 @@
     // quick log symbols
     foreach (var symbol in QuickLogSymbols)
     {
-      Logger.LogInformation("Start quick log: {0}", symbol.FullName);
+      Log.Information("Start quick log: {0}", symbol.FullName);
       var notificationHandle = AdsComService.AddDeviceNotification(
         symbol.Symbol.InstancePath,
         symbol.Symbol.ByteSize,
@@ -455,14 +454,14 @@
     {
       if (!_symbolsDict.TryGetValue(e.Handle, out var symbol))
       {
-        Logger.LogWarning("Symbol not found for handle: {0}", e.Handle);
+        Log.Warning("Symbol not found for handle: {0}", e.Handle);
         return;
       }
 
       var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
       if (dataType == null)
       {
-        Logger.LogWarning("ManagedType is null for symbol: {0}", symbol.FullName);
+        Log.Warning("ManagedType is null for symbol: {0}", symbol.FullName);
         return;
       }
 
@@ -473,7 +472,7 @@
       }
       catch (Exception ex)
       {
-        Logger.LogError("Error converting data for symbol: {0}, Exception: {1}", symbol.FullName, ex);
+        Log.Error("Error converting data for symbol: {0}, Exception: {1}", symbol.FullName, ex);
         return;
       }
 
@@ -484,7 +483,7 @@
     }
     catch (Exception exception)
     {
-      Logger.LogError(exception, "Error in AdsNotificationHandler");
+      Log.Error(exception, "Error in AdsNotificationHandler");
     }
   }
 

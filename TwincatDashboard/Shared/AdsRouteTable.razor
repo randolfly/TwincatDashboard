@@ -1,5 +1,4 @@
-﻿@inject ILogger<AdsRouteTable> Logger
-@using TwincatDashboard.Services.IService
+﻿@using TwincatDashboard.Services.IService
 <MDataTable Headers="DataTableHeaders"
             ResizeMode="DataTableResizeMode.Auto"
             SelectedChanged="SelectedAdsRoueChanged"
@@ -17,7 +16,7 @@
         if (!selectedRouteList.Any()) selectedRouteList = ["Local"];
         var selectedAdsRoute = AdsRouteInfos.FirstOrDefault(
             x => x.Name == selectedRouteList.FirstOrDefault());
-        Logger.LogInformation($"SelectedAdsRoute: {selectedAdsRoute?.Name}");
+        Log.Information($"SelectedAdsRoute: {selectedAdsRoute?.Name}");
         await SelectedAdsRoute.InvokeAsync(selectedAdsRoute);
     }
 

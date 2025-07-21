@@ -1,5 +1,4 @@
-﻿@inject ILogger<LogSetting> Logger
-@inject IAdsComService AdsComService
+﻿@inject IAdsComService AdsComService
 @using Microsoft.Win32
 @using OneOf.Types
 @using TwincatDashboard.Constants
@@ -103,7 +102,7 @@
     LogConfig.SlowLogPeriod = SlowLogPeriod;
     LogConfig.FileType = ExportLogTypes;
     AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
-    Logger.LogInformation("LogConfig saved.");
+    Log.Information("LogConfig saved.");
   }
 
   private void SelectFolder(MouseEventArgs obj)
@@ -117,7 +116,7 @@
     if (folderDialog.ShowDialog() != true) return;
     FolderName = folderDialog.FolderName;
     LogConfig.FolderName = FolderName;
-    Logger.LogInformation("SelectFolder");
+    Log.Information("SelectFolder");
   }
 
 }

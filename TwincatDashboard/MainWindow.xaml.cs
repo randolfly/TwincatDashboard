@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using TwincatDashboard.Models;
 using TwincatDashboard.Services;
-using TwincatDashboard.Services.IService;
 
 namespace TwincatDashboard;
 
@@ -20,9 +19,9 @@ public partial class MainWindow : Window
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddWpfBlazorWebView();
         serviceCollection.AddMasaBlazor();
-        serviceCollection.AddSingleton<IAdsComService, AdsComService>();
-        serviceCollection.AddSingleton<ILogDataService, LogDataService>();
-        serviceCollection.AddSingleton<ILogPlotService, LogPlotService>();
+        serviceCollection.AddSingleton<AdsComService>();
+        serviceCollection.AddSingleton<LogDataService>();
+        serviceCollection.AddSingleton<LogPlotService>();
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()

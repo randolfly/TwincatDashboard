@@ -1,20 +1,20 @@
-﻿@using TwincatDashboard.Services.IService
+﻿@using TwincatDashboard.Services
 <MDataTable Headers="DataTableHeaders"
             ResizeMode="DataTableResizeMode.Auto"
-            SelectedChanged="SelectedAdsRoueChanged"
+            SelectedChanged="SelectedAdsRouteChanged"
             ShowSelect SingleSelect ItemKey="x=>x.Name"
             HideDefaultFooter Dense
-            Items="AdsRouteInfos"/>
+            Items="AdsRouteInfo"/>
 
 @code {
-    [Parameter] public List<AdsRouteInfo> AdsRouteInfos { get; set; } = [];
+    [Parameter] public List<AdsRouteInfo> AdsRouteInfo { get; set; } = [];
     [Parameter] public EventCallback<AdsRouteInfo> SelectedAdsRoute { get; set; }
 
-    private async Task SelectedAdsRoueChanged(IEnumerable<string> selected)
+    private async Task SelectedAdsRouteChanged(IEnumerable<string> selected)
     {
         var selectedRouteList = selected.ToList();
         if (!selectedRouteList.Any()) selectedRouteList = ["Local"];
-        var selectedAdsRoute = AdsRouteInfos.FirstOrDefault(
+        var selectedAdsRoute = AdsRouteInfo.FirstOrDefault(
             x => x.Name == selectedRouteList.FirstOrDefault());
         Log.Information($"SelectedAdsRoute: {selectedAdsRoute?.Name}");
         await SelectedAdsRoute.InvokeAsync(selectedAdsRoute);
@@ -22,9 +22,9 @@
 
     public readonly List<DataTableHeader<AdsRouteInfo>> DataTableHeaders =
     [
-        new() { Text = "Name", Value = nameof(AdsRouteInfo.Name) },
-        new() { Text = "Address", Value = nameof(AdsRouteInfo.Address) },
-        new() { Text = "NetId", Value = nameof(AdsRouteInfo.NetId) }
+        new() { Text = "Name", Value = nameof(Services.AdsRouteInfo.Name) },
+        new() { Text = "Address", Value = nameof(Services.AdsRouteInfo.Address) },
+        new() { Text = "NetId", Value = nameof(Services.AdsRouteInfo.NetId) }
     ];
 
 }

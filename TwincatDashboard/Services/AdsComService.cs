@@ -1,27 +1,41 @@
 ﻿using System.Diagnostics;
 using System.Xml.Linq;
+
 using Microsoft.Extensions.Logging;
+
 using Serilog;
+
 using TwinCAT;
 using TwinCAT.Ads;
 using TwinCAT.Ads.TypeSystem;
 using TwinCAT.TypeSystem;
 using TwinCAT.ValueAccess;
+
 using TwincatDashboard.Constants;
 using TwincatDashboard.Models;
-using TwincatDashboard.Services.IService;
 
 namespace TwincatDashboard.Services;
 
-public class AdsComService() : IAdsComService
+public class AdsRouteInfo
+{
+    public required string Name { get; set; }
+    public required string Address { get; set; }
+    public required string NetId { get; set; }
+}
+
+public class AdsComService() : IDisposable
 {
     private readonly int _cancelTimeout = 2000;
+
+    /// <summary>
+    /// Ads连接状态
+    /// </summary>
+    /// <value>true: 连接上; false: 未连接</value>
     public bool IsAdsConnected => _adsClient.IsConnected;
 
     private readonly AdsClient _adsClient = new();
 
-    public AdsState GetAdsState()
-    {
+    public AdsState GetAdsState() {
         var adsState = AdsState.Invalid;
         try
         {
@@ -41,16 +55,14 @@ public class AdsComService() : IAdsComService
         return adsState;
     }
 
-    public void ConnectAdsServer(AdsConfig adsConfig)
-    {
+    public void ConnectAdsServer(AdsConfig adsConfig) {
         var amsAddress = new AmsAddress(adsConfig.NetId, adsConfig.PortId);
         _adsClient.Connect(amsAddress);
         Log.Information("Ads server connected: {NetId}:{PortId}", adsConfig.NetId, adsConfig.PortId);
         Log.Information("Ads server state: {AdsState}", GetAdsState());
     }
 
-    public async Task ConnectAdsServerAsync(AdsConfig adsConfig)
-    {
+    public async Task ConnectAdsServerAsync(AdsConfig adsConfig) {
         var cts = new CancellationTokenSource();
         cts.CancelAfter(_cancelTimeout);
         var amsAddress = new AmsAddress(adsConfig.NetId, adsConfig.PortId);
@@ -71,14 +83,12 @@ public class AdsComService() : IAdsComService
         }
     }
 
-    public void DisconnectAdsServer()
-    {
+    public void DisconnectAdsServer() {
         _adsClient.Disconnect();
         Debug.WriteLine("Ads server state: {0}", GetAdsState());
     }
 
-    public async Task DisconnectAdsServerAsync()
-    {
+    public async Task DisconnectAdsServerAsync() {
         if (!IsAdsConnected) return;
         var cts = new CancellationTokenSource();
         cts.CancelAfter(_cancelTimeout);
@@ -107,8 +117,7 @@ public class AdsComService() : IAdsComService
     /// <returns>
     ///     <see cref="List{SymbolInfo}"/>
     /// </returns>
-    public List<SymbolInfo> GetAvailableSymbols()
-    {
+    public List<SymbolInfo> GetAvailableSymbols() {
         var settings = new SymbolLoaderSettings(SymbolsLoadMode.VirtualTree,
             ValueAccessMode.SymbolicByHandle);
         var symbolLoader = SymbolLoaderFactory.Create(_adsClient, settings);
@@ -126,8 +135,7 @@ public class AdsComService() : IAdsComService
 
         return symbolList;
 
-        List<SymbolInfo> LoadSymbolTreeBfs(ISymbol root)
-        {
+        List<SymbolInfo> LoadSymbolTreeBfs(ISymbol root) {
             var symbolInfos = new List<SymbolInfo>();
             var transverseOrder = new Queue<ISymbol>();
 
@@ -161,8 +169,7 @@ public class AdsComService() : IAdsComService
         }
     }
 
-    public async Task<object?> ReadPlcSymbolValueAsync(string symbolPath, Type type)
-    {
+    public async Task<object?> ReadPlcSymbolValueAsync(string symbolPath, Type type) {
         if (string.IsNullOrEmpty(symbolPath)) return null;
         var resultHandle = await _adsClient.CreateVariableHandleAsync(symbolPath, CancellationToken.None);
         var varHandle = resultHandle.Handle;
@@ -190,8 +197,7 @@ public class AdsComService() : IAdsComService
         return null;
     }
 
-    public async Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value)
-    {
+    public async Task<bool> WritePlcSymbolValueAsync<T>(string symbolPath, T value) {
         if (string.IsNullOrEmpty(symbolPath) || value == null) return false;
         var resultHandle = await _adsClient
             .CreateVariableHandleAsync(symbolPath, CancellationToken.None);
@@ -220,8 +226,7 @@ public class AdsComService() : IAdsComService
         return false;
     }
 
-    public async Task<int> GetTaskCycleTimeAsync()
-    {
+    public async Task<int> GetTaskCycleTimeAsync() {
         if (!IsAdsConnected) return 1;
         var cycleTime = await ReadPlcSymbolValueAsync(AdsConstants.TaskCycleTimeName, typeof(uint)) as uint?;
         return cycleTime switch
@@ -240,8 +245,7 @@ public class AdsComService() : IAdsComService
     public void RemoveNotificationHandler(EventHandler<AdsNotificationEventArgs> handler) =>
         _adsClient.AdsNotification -= handler;
 
-    public uint AddDeviceNotification(string path, int byteSize, NotificationSettings settings)
-    {
+    public uint AddDeviceNotification(string path, int byteSize, NotificationSettings settings) {
         _adsClient.TryAddDeviceNotification(path, byteSize, settings, null, out var notificationHandle);
         return notificationHandle;
     }
@@ -249,8 +253,7 @@ public class AdsComService() : IAdsComService
     public void RemoveDeviceNotification(uint notificationHandle) =>
         _adsClient.TryDeleteDeviceNotification(notificationHandle);
 
-    public List<AdsRouteInfo> ScanAdsRoutes()
-    {
+    public List<AdsRouteInfo> ScanAdsRoutes() {
         var xml = XDocument.Load(AppConstants.AdsRouteXmlPath);
         var routeList = xml?.Root?.Element("RemoteConnections")?.Elements()
             .Select(route => new AdsRouteInfo

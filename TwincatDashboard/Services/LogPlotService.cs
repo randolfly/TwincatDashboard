@@ -1,9 +1,8 @@
-﻿using TwincatDashboard.Services.IService;
-using TwincatDashboard.Windows;
+﻿using TwincatDashboard.Windows;
 
 namespace TwincatDashboard.Services;
 
-public class LogPlotService : ILogPlotService
+public class LogPlotService
 {
     public Dictionary<string, LogPlotWindow> PlotDict { get; } = [];
 

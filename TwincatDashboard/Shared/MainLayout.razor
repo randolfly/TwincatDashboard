@@ -1,10 +1,9 @@
-﻿@inject IAdsComService AdsComService
+﻿@inject AdsComService AdsComService
 
 @using System.Diagnostics
 @using TwinCAT.Ads
 @using TwincatDashboard.Models
 @using TwincatDashboard.Services
-@using TwincatDashboard.Services.IService
 @inherits LayoutComponentBase
 
 <MApp>
@@ -87,7 +86,7 @@
                       <div class="text-h6">AdsRoute Tables</div>
                     </MCardText>
                     <MDivider/>
-                    <AdsRouteTable AdsRouteInfos="AdsRouteInfos"
+                    <AdsRouteTable AdsRouteInfo="AdsRouteInfos"
                                    SelectedAdsRoute="HandleAdsRouteChange"/>
                   </MCard>
                 </ChildContent>

@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+
 using TwincatDashboard.Models;
 using TwincatDashboard.Utils;
+
 using Util.Reflection.Expressions;
 
 namespace TwincatDashboard.Services.IService;
@@ -18,7 +20,6 @@ public interface ILogDataService
     public Task AddDataAsync(string channelName, double data);
     public void RemoveAllChannels();
     public Task<Dictionary<string, List<double>>> LoadAllChannelsAsync();
-
     public void RegisterSlowLog(string channelName);
     public void AddSlowLogData(string channelName, double data);
     public void RemoveAllSlowLog();
@@ -57,8 +58,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
     // storage tmp data for logging(default data type is double)
     private readonly CircularBuffer<double> _buffer = new(bufferCapacity);
 
-    public async Task AddAsync(double data)
-    {
+    public async Task AddAsync(double data) {
         _buffer.Add(data);
         if ((_buffer.Size * 2) >= _buffer.Capacity)
         {
@@ -68,8 +68,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         }
     }
 
-    private static async Task SaveToFileAsync(ArraySegment<double> array, string filePath)
-    {
+    private static async Task SaveToFileAsync(ArraySegment<double> array, string filePath) {
         var stringBuilder = new StringBuilder();
         foreach (var value in array)
         {
@@ -92,8 +91,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
 
     public static void ReturnArray(double[] doubles) => ArrayPool.Return(doubles);
 
-    public async Task<List<double>> LoadFromFileAsync()
-    {
+    public async Task<List<double>> LoadFromFileAsync() {
         var data = new List<double>();
         if (!File.Exists(FilePath))
         {
@@ -120,8 +118,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         return data;
     }
 
-    public async Task<double[]> LoadArrayPoolFromFileAsync()
-    {
+    public async Task<double[]> LoadArrayPoolFromFileAsync() {
         // if file not exists, return empty array pool
         if (!File.Exists(FilePath))
         {
@@ -147,8 +144,7 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         return data;
     }
 
-    public void DeleteTmpFile()
-    {
+    public void DeleteTmpFile() {
         if (File.Exists(FilePath))
         {
             File.Delete(FilePath);

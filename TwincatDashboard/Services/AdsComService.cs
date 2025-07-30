@@ -45,8 +45,8 @@ public class AdsComService() : IAdsComService
     {
         var amsAddress = new AmsAddress(adsConfig.NetId, adsConfig.PortId);
         _adsClient.Connect(amsAddress);
-        Log.Information($"Ads server connected: {adsConfig.NetId}:{adsConfig.PortId}");
-        Log.Information($"Ads server state: {GetAdsState()}");
+        Log.Information("Ads server connected: {NetId}:{PortId}", adsConfig.NetId, adsConfig.PortId);
+        Log.Information("Ads server state: {AdsState}", GetAdsState());
     }
 
     public async Task ConnectAdsServerAsync(AdsConfig adsConfig)
@@ -57,8 +57,8 @@ public class AdsComService() : IAdsComService
         try
         {
             await _adsClient.ConnectAsync(amsAddress, cts.Token);
-            Log.Information($"Ads server connected: {adsConfig.NetId}:{adsConfig.PortId}");
-            Log.Information($"Ads server state: {GetAdsState()}");
+            Log.Information("Ads server connected: {NetId}:{PortId}", adsConfig.NetId, adsConfig.PortId);
+            Log.Information("Ads server state: {AdsState}", GetAdsState());
         }
         catch (OperationCanceledException e)
         {
@@ -85,7 +85,7 @@ public class AdsComService() : IAdsComService
         try
         {
             await _adsClient.DisconnectAsync(cts.Token);
-            Log.Information($"Ads server state: {GetAdsState()}");
+            Log.Information("Ads server state: {AdsState}", GetAdsState());
         }
         catch (OperationCanceledException e)
         {
@@ -168,9 +168,7 @@ public class AdsComService() : IAdsComService
         var varHandle = resultHandle.Handle;
         if (!resultHandle.Succeeded)
         {
-            Log.Error(
-                $"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}"
-            );
+            Log.Error("Failed to create variable handle for {SymbolPath} with error: {ErrorCode}", symbolPath, resultHandle.ErrorCode);
             return null;
         }
 
@@ -182,7 +180,7 @@ public class AdsComService() : IAdsComService
         }
         catch (Exception e)
         {
-            Log.Error(e, $"Failed to read plc symbol value: {symbolPath}");
+            Log.Error(e, "Failed to read plc symbol value: {SymbolPath}", symbolPath);
         }
         finally
         {
@@ -200,9 +198,7 @@ public class AdsComService() : IAdsComService
         var varHandle = resultHandle.Handle;
         if (!resultHandle.Succeeded)
         {
-            Log.Error(
-                $"Failed to create variable handle for {symbolPath} with error: {resultHandle.ErrorCode}"
-            );
+            Log.Error("Failed to create variable handle for {SymbolPath} with error: {ErrorCode}", symbolPath, resultHandle.ErrorCode);
             return false;
         }
 
@@ -214,7 +210,7 @@ public class AdsComService() : IAdsComService
         }
         catch (Exception e)
         {
-            Log.Error(e, $"Failed to write plc symbol {symbolPath} with value {value}");
+            Log.Error(e, "Failed to write plc symbol {SymbolPath} with value {Value}", symbolPath, value);
         }
         finally
         {

@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
 using System.IO;
 using System.Text;
+
 using MathNet.Numerics.Data.Matlab;
 using MathNet.Numerics.LinearAlgebra;
+
 using TwincatDashboard.Services.IService;
 
 namespace TwincatDashboard.Services;
@@ -14,31 +16,26 @@ public class LogDataService : ILogDataService
     public Dictionary<string, List<double>> SlowLogDict { get; } = [];
     public Dictionary<string, LogDataChannel> QuickLogDict { get; } = [];
 
-    public void AddChannel(string channelName)
-    {
+    public void AddChannel(string channelName) {
         QuickLogDict.Add(channelName, new LogDataChannel(BufferCapacity, channelName));
     }
 
-    public void RemoveAllChannels()
-    {
+    public void RemoveAllChannels() {
         QuickLogDict.Clear();
     }
 
-    public async Task AddDataAsync(string channelName, double data)
-    {
+    public async Task AddDataAsync(string channelName, double data) {
         if (QuickLogDict.TryGetValue(channelName, out var value))
         {
             await value.AddAsync(data);
         }
     }
 
-    public async Task<List<double>> LoadDataAsync(string channelName)
-    {
+    public async Task<List<double>> LoadDataAsync(string channelName) {
         return await QuickLogDict[channelName].LoadFromFileAsync();
     }
 
-    public async Task<Dictionary<string, List<double>>> LoadAllChannelsAsync()
-    {
+    public async Task<Dictionary<string, List<double>>> LoadAllChannelsAsync() {
         var resultDict = new Dictionary<string, List<double>>();
         foreach (var channel in QuickLogDict)
         {
@@ -54,21 +51,18 @@ public class LogDataService : ILogDataService
         return resultDict;
     }
 
-    public void RegisterSlowLog(string channelName)
-    {
+    public void RegisterSlowLog(string channelName) {
         SlowLogDict.Add(channelName, []);
     }
 
-    public void AddSlowLogData(string channelName, double data)
-    {
+    public void AddSlowLogData(string channelName, double data) {
         if (SlowLogDict.TryGetValue(channelName, out var value))
         {
             value.Add(data);
         }
     }
 
-    public void RemoveAllSlowLog()
-    {
+    public void RemoveAllSlowLog() {
         foreach (var channel in SlowLogDict)
         {
             channel.Value.Clear();
@@ -88,8 +82,7 @@ public class LogDataService : ILogDataService
         Dictionary<string, List<double>> dataSrc,
         string fileName,
         List<string> exportTypes
-    )
-    {
+    ) {
         if (exportTypes.Contains("csv"))
         {
             var stringBuilder = new StringBuilder();
@@ -132,8 +125,7 @@ public class LogDataService : ILogDataService
         }
     }
 
-    public void DeleteTmpFiles()
-    {
+    public void DeleteTmpFiles() {
         QuickLogDict.Values.ToList().ForEach(channel => channel.DeleteTmpFile());
     }
 }

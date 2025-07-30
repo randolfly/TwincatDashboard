@@ -372,6 +372,8 @@
       return false;
     }
 
+    LogDataService.DeleteTmpFiles();
+
     _symbolsDict.Clear();
     LogDataService.RemoveAllChannels();
     LogPlotService.RemoveAllChannels();
@@ -427,7 +429,7 @@
     // quick log data: load data from tmp folder
     var quickLogResult = await LogDataService.LoadAllChannelsAsync();
     var slowLogResult = LogDataService.SlowLogDict;
-    LogDataService.DeleteTmpFiles();
+    
     // export
     await LogDataService.ExportDataAsync(quickLogResult,
       _logConfig.QuickLogFileFullName, _logConfig.FileType);

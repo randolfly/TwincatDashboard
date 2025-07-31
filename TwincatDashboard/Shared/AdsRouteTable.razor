@@ -16,7 +16,7 @@
         if (!selectedRouteList.Any()) selectedRouteList = ["Local"];
         var selectedAdsRoute = AdsRouteInfo.FirstOrDefault(
             x => x.Name == selectedRouteList.FirstOrDefault());
-        Log.Information($"SelectedAdsRoute: {selectedAdsRoute?.Name}");
+        Log.Information("SelectedAdsRoute: {RouteName}", selectedAdsRoute?.Name);
         await SelectedAdsRoute.InvokeAsync(selectedAdsRoute);
     }
 

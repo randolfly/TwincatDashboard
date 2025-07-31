@@ -1,30 +1,29 @@
-﻿namespace TwincatDashboard.Utils;
-public class CircularBuffer<T>
+﻿using System.Buffers;
+
+namespace TwincatDashboard.Utils;
+/// <summary>
+/// Initializes a new instance of the <see cref="CircularBuffer{T}"/> class.
+/// 
+/// </summary>
+/// <param name='capacity'>
+/// Buffer capacity. Must be positive.
+/// </param>
+public class CircularBuffer<T>(int capacity) : IDisposable
+    where T : struct
 {
-    private readonly T[] _buffer;
+    private static ArrayPool<T> ArrayPool => ArrayPool<T>.Shared;
+
+    private readonly T[] _buffer = ArrayPool.Rent(capacity);
 
     /// <summary>
     /// The _start. Index of the first element in buffer.
     /// </summary>
-    private int _start;
+    private int _start = 0;
 
     /// <summary>
     /// The _end. Index after the last element in the buffer.
     /// </summary>
-    private int _end;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CircularBuffer{T}"/> class.
-    /// 
-    /// </summary>
-    /// <param name='capacity'>
-    /// Buffer capacity. Must be positive.
-    /// </param>
-    public CircularBuffer(int capacity) {
-        _buffer = new T[capacity];
-        _start = 0;
-        _end = 0;
-    }
+    private int _end = 0;
 
     public int Capacity => _buffer.Length;
     public bool IsFull => Size == Capacity;
@@ -60,5 +59,16 @@ public class CircularBuffer<T>
 
         _start = (_start + size) % Capacity;
         return result;
+    }
+
+    public void Dispose() {
+        ReturnBufferToArrayPool();
+    }
+
+    public void ReturnBufferToArrayPool() {
+        if (_buffer != null)
+        {
+            ArrayPool.Return(_buffer);
+        }
     }
 }

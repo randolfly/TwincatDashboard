@@ -188,7 +188,7 @@
       AdsState.Run => "#2196F3",//blue
       _ => "#F44336"//red
     };
-    Log.Information($"Ads server state: {AdsComService.GetAdsState()}");
+        Log.Information("Ads server state: {AdsState}", AdsComService.GetAdsState());
   }
 
   private async Task DisConnectAdsServerAsync()

@@ -3,9 +3,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Windows.Shell;
 
 using MathNet.Numerics.Data.Matlab;
 using MathNet.Numerics.LinearAlgebra;
+
+using Serilog;
 
 using TwincatDashboard.Models;
 using TwincatDashboard.Utils;
@@ -34,21 +37,12 @@ public class LogDataService
         }
     }
 
-    public async Task<List<double>> LoadDataAsync(string channelName) {
-        return await QuickLogDict[channelName].LoadFromFileAsync();
-    }
-
-    public async Task<Dictionary<string, List<double>>> LoadAllChannelsAsync() {
-        var resultDict = new Dictionary<string, List<double>>();
+    public async Task<Dictionary<string, double[]>> LoadAllChannelsAsync() {
+        var resultDict = new Dictionary<string, double[]>();
         foreach (var channel in QuickLogDict)
         {
-            resultDict.Add(channel.Key, await channel.Value.LoadFromFileAsync());
-        }
-
-        var minCount = resultDict.Min(x => x.Value.Count);
-        foreach (var channel in resultDict)
-        {
-            channel.Value.RemoveRange(minCount, channel.Value.Count - minCount);
+            await channel.Value.LoadFromFileByArrayPoolAsync();
+            resultDict.Add(channel.Key, channel.Value.LogData);
         }
 
         return resultDict;
@@ -80,29 +74,25 @@ public class LogDataService
     /// <param name="dataSrc"></param>
     /// <param name="fileName">export file full name, doesn't contain suffix, such as "c:/FOLDER/aaa"</param>
     /// <param name="exportTypes"></param>
+    /// <param name="dataLength">actual data length</param>
     /// <returns></returns>
-    public async Task ExportDataAsync(
-        Dictionary<string, List<double>> dataSrc,
-        string fileName,
-        List<string> exportTypes
-    ) {
+    public async Task ExportDataAsync(Dictionary<string, double[]> dataSrc, string fileName, List<string> exportTypes, int dataLength) {
         if (exportTypes.Contains("csv"))
         {
-            var stringBuilder = new StringBuilder();
-            stringBuilder.AppendLine(string.Join(',', dataSrc.Keys));
-            var rowCount = dataSrc.First().Value.Count;
+            var fileStream = new FileStream(fileName + ".csv", FileMode.Create, FileAccess.Write, FileShare.None);
+            using var writer = new StreamWriter(fileStream, Encoding.UTF8);
+            // Write header
+            await writer.WriteLineAsync(string.Join(',', dataSrc.Keys));
+            var rowCount = dataLength;
             for (var i = 0; i < rowCount; i++)
             {
                 var row = new List<string>();
                 foreach (var channel in dataSrc)
                 {
-                    row.Add(channel.Value[i].ToString(CultureInfo.InvariantCulture));
+                    row.Add(channel.Value.ElementAt(i).ToString(CultureInfo.InvariantCulture));
                 }
-
-                stringBuilder.AppendLine(string.Join(',', row));
+                await writer.WriteLineAsync(string.Join(',', row));
             }
-
-            await File.WriteAllTextAsync(fileName + ".csv", stringBuilder.ToString());
         }
 
         if (exportTypes.Contains("mat"))
@@ -111,20 +101,24 @@ public class LogDataService
             foreach (var keyValuePair in dataSrc)
             {
                 exportMatDict.Add(
-                    keyValuePair
-                        .Key.Replace("TwinCAT_SystemInfoVarList._TaskInfo[1].", "Task")
-                        .Replace(".", "_")
-                        .Replace("[", "_")
-                        .Replace("]", "_"),
-                    Matrix<double>.Build.Dense(
-                        keyValuePair.Value.Count,
+                FormatNameForMatFile(keyValuePair.Key),
+                Matrix<double>.Build.Dense(
+                        dataLength,
                         1,
-                        keyValuePair.Value.ToArray()
+                        keyValuePair.Value[..dataLength]
                     )
                 );
             }
 
             await Task.Run(() => MatlabWriter.Write(fileName + ".mat", exportMatDict));
+        }
+
+        static string FormatNameForMatFile(string symbolName) {
+            return symbolName
+                .Replace("TwinCAT_SystemInfoVarList._TaskInfo[1].", "Task")
+                .Replace(".", "_")
+                .Replace("[", "_")
+                .Replace("]", "_");
         }
     }
 
@@ -134,11 +128,12 @@ public class LogDataService
 }
 
 
-public class LogDataChannel(int bufferCapacity, string channelName)
+public class LogDataChannel(int bufferCapacity, string channelName) : IDisposable
 {
     private string Name { get; set; } = channelName;
     public string? Description { get; set; }
     public int BufferCapacity { get; set; } = bufferCapacity;
+    public int DataLength { get; set; } = 0;
 
     private static string LogDataTempFolder
     {
@@ -157,14 +152,19 @@ public class LogDataChannel(int bufferCapacity, string channelName)
     private string FilePath => Path.Combine(LogDataTempFolder, "_" + Name + ".csv");
 
     // storage tmp data for logging(default data type is double)
-    private readonly CircularBuffer<double> _buffer = new(bufferCapacity);
+    private readonly CircularBuffer<double> ChannelBuffer = new(bufferCapacity);
+
+    // Use ArrayPool to rent and return arrays for performance optimization
+    private static ArrayPool<double> ArrayPool => ArrayPool<double>.Shared;
+    public double[] LogData { get; set; } = ArrayPool.Rent(0);
 
     public async Task AddAsync(double data) {
-        _buffer.Add(data);
-        if ((_buffer.Size * 2) >= _buffer.Capacity)
+        ChannelBuffer.Add(data);
+        DataLength++;
+        if ((ChannelBuffer.Size * 2) >= ChannelBuffer.Capacity)
         {
             Debug.WriteLine($"Buffer is half size, save to file: {FilePath}");
-            var dataSrc = _buffer.RemoveRange(_buffer.Size);
+            var dataSrc = ChannelBuffer.RemoveRange(ChannelBuffer.Size);
             await SaveToFileAsync(dataSrc, FilePath);
         }
     }
@@ -188,61 +188,56 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         await writer.WriteAsync(stringBuilder.ToString());
     }
 
-    private static ArrayPool<double> ArrayPool => ArrayPool<double>.Shared;
-
-    public static void ReturnArray(double[] doubles) => ArrayPool.Return(doubles);
-
-    public async Task<List<double>> LoadFromFileAsync() {
-        var data = new List<double>();
+    public async Task LoadFromFileByArrayPoolAsync() {
+        // if file not exists, return empty array pool
         if (!File.Exists(FilePath))
         {
-            return data;
+            LogData = ArrayPool.Rent(0);
+            return;
         }
 
+        LogData = ArrayPool.Rent(DataLength);
+        // use a stream to read file by lines
+
         await using var fileStream = new FileStream(
-            FilePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            4096,
-            true
-        );
+        FilePath,
+        FileMode.Open,
+        FileAccess.Read,
+        FileShare.Read,
+        4096,
+        true);
+
         using var reader = new StreamReader(fileStream);
+        var index = 0;
         while (await reader.ReadLineAsync() is { } line)
         {
             if (double.TryParse(line, out var value))
             {
-                data.Add(value);
-            }
-        }
-
-        return data;
-    }
-
-    public async Task<double[]> LoadArrayPoolFromFileAsync() {
-        // if file not exists, return empty array pool
-        if (!File.Exists(FilePath))
-        {
-            return ArrayPool.Rent(0);
-        }
-
-        // get file lines number
-        var fileData = await File.ReadAllLinesAsync(FilePath);
-        var arrayLength = fileData.Count();
-        var data = ArrayPool.Rent(arrayLength);
-        for (int i = 0; i < arrayLength; i++)
-        {
-            if (double.TryParse(fileData[i], out var value))
-            {
-                data[i] = value;
+                if (index >= LogData.Length) break;
+                LogData[index] = value;
             }
             else
             {
-                data[i] = 0;
+                Log.Warning("Failed to parse line: {Line} of {File}", line, FilePath);
+                LogData[index] = 0;
             }
+            index++;
         }
+        // update DataLength if actual data length is less than expected(file IO latency may cause this)
+        if (index <= DataLength) DataLength = index;
+        Log.Information("{File} ideal data length: {DataLength}, actual data length: {ActualLength}",
+            FilePath, LogData.Length, index);
 
-        return data;
+        Log.Information("Retrieve all data from file {FilePath}", FilePath);
+    }
+
+    public void ReturnArrayToPool() {
+        if (LogData is not null && LogData.Length > 0)
+        {
+            ArrayPool.Return(LogData);
+            LogData = [];
+        }
+        ChannelBuffer.ReturnBufferToArrayPool();
     }
 
     public void DeleteTmpFile() {
@@ -250,5 +245,9 @@ public class LogDataChannel(int bufferCapacity, string channelName)
         {
             File.Delete(FilePath);
         }
+    }
+
+    public void Dispose() {
+        ReturnArrayToPool();
     }
 }

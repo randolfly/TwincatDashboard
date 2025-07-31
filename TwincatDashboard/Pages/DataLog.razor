@@ -5,6 +5,7 @@
 @using System.Timers
 @using System.Diagnostics
 @using FuzzySharp
+@using System.Runtime
 @using TwinCAT.Ads
 @using TwinCAT.Ads.TypeSystem
 @using Process = System.Diagnostics.Process
@@ -361,15 +362,13 @@
     /// <returns>true->start log successfully, false->error</returns>
     private bool StartLog() {
         _slowLogTimer.Interval = _logConfig.SlowLogPeriod;
-        ExportLogConfig();
         if (LogSymbols.Count == 0)
         {
             Log.Information("No log symbols selected");
             return false;
         }
-
-        LogDataService.DeleteTmpFiles();
-
+        ExportLogConfig();
+        
         _symbolsDict.Clear();
         LogDataService.RemoveAllChannels();
         LogPlotService.RemoveAllChannels();
@@ -422,19 +421,35 @@
 
         _symbolsDict.Clear();
 
-        // quick log data: load data from tmp folder
+        // quick log data: load data from tmp folder, the actual length of log data is LogDataService.QuickLogDict[channel].DataLength
         var quickLogResult = await LogDataService.LoadAllChannelsAsync();
-        var slowLogResult = LogDataService.SlowLogDict;
+        var slowLogResult = new Dictionary<string, double[]>();
+        foreach (var slowLog in LogDataService.SlowLogDict)
+        {
+            slowLogResult.Add(slowLog.Key, slowLog.Value.ToArray());
+        }
 
         // export
+        var exportQuickDataLength = LogDataService.QuickLogDict.Values.Min(channel => channel.DataLength);
+        var exportSlowDataLength = LogDataService.SlowLogDict.Values.Min(list => list.Count);
         await LogDataService.ExportDataAsync(quickLogResult,
-          _logConfig.QuickLogFileFullName, _logConfig.FileType);
+          _logConfig.QuickLogFileFullName, _logConfig.FileType, exportQuickDataLength);
         await LogDataService.ExportDataAsync(slowLogResult,
-          _logConfig.SlowLogFileFullName, _logConfig.FileType);
+          _logConfig.SlowLogFileFullName, _logConfig.FileType, exportSlowDataLength);
 
         // plot
-        LogPlotService.ShowAllChannelsWithNewData(quickLogResult, _logConfig.QuickLogPeriod);
+        LogPlotService.ShowAllChannelsWithNewData(quickLogResult, exportQuickDataLength, _logConfig.QuickLogPeriod);
         LogDataService.RemoveAllSlowLog();
+
+        // delete tmp files
+        LogDataService.DeleteTmpFiles();
+        // return array pool data
+        foreach (var channel in LogDataService.QuickLogDict.Values)
+        {
+            channel.ReturnArrayToPool();
+        }
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect();
 
         return true;
     }

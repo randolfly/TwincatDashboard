@@ -33,7 +33,8 @@ public class LogPlotService
     }
 
     public void ShowAllChannelsWithNewData(
-        Dictionary<string, List<double>> dataSrcDict,
+        Dictionary<string, double[]> dataSrcDict,
+        int dataLength,
         int sampleTime = 1
     )
     {
@@ -41,8 +42,9 @@ public class LogPlotService
         {
             if (PlotDict.TryGetValue(channelName, out var value))
             {
-                value.ShowAllData([.. data], sampleTime);
+                value.ShowAllData(data[..dataLength], sampleTime);
             }
         }
     }
+
 }

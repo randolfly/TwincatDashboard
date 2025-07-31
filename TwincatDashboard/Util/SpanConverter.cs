@@ -14,7 +14,7 @@ public static class SpanConverter
     }
 
     public static object ConvertTo(ReadOnlySpan<byte> span, Type targetType) {
-        if (span == null || span.Length == 0)
+        if (span.IsEmpty || span.Length == 0)
         {
             throw new ArgumentException("Span is null or empty.", nameof(span));
         }

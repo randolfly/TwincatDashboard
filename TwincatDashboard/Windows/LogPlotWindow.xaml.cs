@@ -15,7 +15,7 @@ public partial class LogPlotWindow : Window, IDisposable
     private readonly DataStreamer _dataStreamer;
     private readonly Timer _updatePlotTimer = new() { Interval = 50, Enabled = true, AutoReset = true };
 
-    private SignalXY? _fullDataSignal;
+    private Signal? _fullDataSignal;
     private Crosshair? _fullDataCrosshair;
 
     public LogPlotWindow(string title, int logNum) {
@@ -80,9 +80,8 @@ public partial class LogPlotWindow : Window, IDisposable
         _updatePlotTimer.Stop();
         LogPlot.Plot.Clear();
         //LogPlot.Plot.Axes.ContinuouslyAutoscale = false;
-        var xs = Enumerable.Range(0, ys.Length).Select(x => x * sampleTime).ToArray();
         LogPlot.Plot.Add.Palette = new ScottPlot.Palettes.Nord();
-        _fullDataSignal = LogPlot.Plot.Add.SignalXY(xs, ys);
+        _fullDataSignal = LogPlot.Plot.Add.SignalConst(ys, sampleTime);
 
         _fullDataCrosshair = LogPlot.Plot.Add.Crosshair(0, 0);
         _fullDataCrosshair.IsVisible = false;
@@ -101,7 +100,7 @@ public partial class LogPlotWindow : Window, IDisposable
             // determine where the mouse is and get the nearest point
             Pixel mousePixel = new(currentPosition.X * LogPlot.DisplayScale, currentPosition.Y * LogPlot.DisplayScale);
             var mouseLocation = LogPlot.Plot.GetCoordinates(mousePixel);
-            var nearest = _fullDataSignal.Data.GetNearest(mouseLocation,
+            var nearest = _fullDataSignal.GetNearest(mouseLocation,
                 LogPlot.Plot.LastRender);
 
             switch (nearest.IsReal)

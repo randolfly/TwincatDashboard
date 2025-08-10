@@ -290,14 +290,14 @@
             var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
             if (dataType == null)
             {
-                Log.Warning("ManagedType is null for symbol: {0}", symbol.FullName);
+                Log.Warning("ManagedType is null for symbol: {0}, Raw Type: {1}", symbol.FullName, symbol.Symbol.DataType);
                 return;
             }
 
             var value = await AdsComService.ReadPlcSymbolValueAsync(symbol.FullName, dataType);
             if (value is null)
             {
-                Log.Warning(messageTemplate: "ManagedType is null for symbol: {0}", symbol.FullName);
+                Log.Warning(messageTemplate: "Value is null for symbol: {0}, Raw Type: {1}", symbol.FullName, symbol.Symbol.DataType);
                 return;
             }
 
@@ -375,7 +375,7 @@
         // slow log symbols: register slow log data
         foreach (var symbol in SlowLogSymbols)
         {
-            Log.Information("Start slow log: {0}", symbol.FullName);
+            Log.Information("Start slow log: {0}, Raw Type: {1}", symbol.FullName, symbol.Symbol.DataType);
             LogDataService.RegisterSlowLog(symbol.FullName);
         }
 
@@ -388,7 +388,7 @@
         // quick log symbols
         foreach (var symbol in QuickLogSymbols)
         {
-            Log.Information("Start quick log: {0}", symbol.FullName);
+            Log.Information("Start quick log: {0}, Raw Type: {1}", symbol.FullName, symbol.Symbol.DataType);
             var notificationHandle = AdsComService.AddDeviceNotification(
               symbol.Symbol.InstancePath,
               symbol.Symbol.ByteSize,

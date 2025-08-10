@@ -127,7 +127,7 @@ public class AdsComService() : IDisposable
 
         foreach (var symbol in symbols)
         {
-            if (AdsConstants.ReadNamespace.Contains(symbol.InstanceName))
+            if (AdsConstants.ReadNamespace.Contains(symbol.InstanceName, StringComparer.CurrentCultureIgnoreCase))
             {
                 symbolList.AddRange(LoadSymbolTreeBfs(symbol));
             }

@@ -42,7 +42,7 @@ public class LogPlotService
         {
             if (PlotDict.TryGetValue(channelName, out var value))
             {
-                value.ShowAllData(data[..dataLength], sampleTime);
+                value.ShowAllData(data, sampleTime);
             }
         }
     }

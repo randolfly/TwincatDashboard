@@ -23,6 +23,12 @@ public static class SpanConverter
 
         switch (Type.GetTypeCode(targetType))
         {
+            case TypeCode.Byte:
+                if (span.Length >= sizeof(byte))
+                {
+                    return span[0];
+                }
+                break;
             case TypeCode.Boolean:
                 if (span.Length >= sizeof(bool))
                 {

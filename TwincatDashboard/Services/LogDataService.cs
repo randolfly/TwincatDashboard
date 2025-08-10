@@ -80,7 +80,7 @@ public class LogDataService
         if (exportTypes.Contains("csv"))
         {
             var fileStream = new FileStream(fileName + ".csv", FileMode.Create, FileAccess.Write, FileShare.None);
-            using var writer = new StreamWriter(fileStream, Encoding.UTF8);
+            await using var writer = new StreamWriter(fileStream, Encoding.UTF8);
             // Write header
             await writer.WriteLineAsync(string.Join(',', dataSrc.Keys));
             var rowCount = dataLength;
@@ -100,12 +100,15 @@ public class LogDataService
             var exportMatDict = new Dictionary<string, Matrix<double>>();
             foreach (var keyValuePair in dataSrc)
             {
+                // TODO: The Matrix.Build.Dense method require an array instead of a Span, which leads to further array copy
+                //var arraySlice = new ReadOnlySpan<double>(
+                //    keyValuePair.Value, 0, dataLength);
                 exportMatDict.Add(
                 FormatNameForMatFile(keyValuePair.Key),
                 Matrix<double>.Build.Dense(
-                        dataLength,
+                        keyValuePair.Value.Length,
                         1,
-                        keyValuePair.Value[..dataLength]
+                        keyValuePair.Value
                     )
                 );
             }
@@ -133,7 +136,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
     private string Name { get; set; } = channelName;
     public string? Description { get; set; }
     public int BufferCapacity { get; set; } = bufferCapacity;
-    public int DataLength { get; set; } = 0;
+    public int DataLength { get; private set; } = 0;
 
     private static string LogDataTempFolder
     {
@@ -156,7 +159,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
 
     // Use ArrayPool to rent and return arrays for performance optimization
     private static ArrayPool<double> ArrayPool => ArrayPool<double>.Shared;
-    public double[] LogData { get; set; } = ArrayPool.Rent(0);
+    public double[] LogData { get; private set; } = ArrayPool.Rent(0);
 
     public async Task AddAsync(double data) {
         ChannelBuffer.Add(data);
@@ -200,12 +203,12 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
         // use a stream to read file by lines
 
         await using var fileStream = new FileStream(
-        FilePath,
-        FileMode.Open,
-        FileAccess.Read,
-        FileShare.Read,
-        4096,
-        true);
+            FilePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            4096,
+            true);
 
         using var reader = new StreamReader(fileStream);
         var index = 0;
@@ -225,6 +228,10 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
         }
         // update DataLength if actual data length is less than expected(file IO latency may cause this)
         if (index <= DataLength) DataLength = index;
+        for (var i = DataLength; i < LogData.Length; i++)
+        {
+            LogData[i] = LogData[DataLength-1]; // fill the rest with last value
+        }
         Log.Information("{File} ideal data length: {DataLength}, actual data length: {ActualLength}",
             FilePath, LogData.Length, index);
 

@@ -78,7 +78,8 @@ public partial class LogPlotWindow : Window, IDisposable
     /// <param name="sampleTime">sample time, unit ms</param>
     public void ShowAllData(double[] ys, int sampleTime = 1) {
         _updatePlotTimer.Stop();
-        LogPlot.Plot.Clear();
+        // LogPlot.Plot.Clear();
+        LogPlot.Reset();
         //LogPlot.Plot.Axes.ContinuouslyAutoscale = false;
         LogPlot.Plot.Add.Palette = new ScottPlot.Palettes.Nord();
         _fullDataSignal = LogPlot.Plot.Add.SignalConst(ys, sampleTime);

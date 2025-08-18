@@ -7,6 +7,7 @@ using System.Windows.Shell;
 
 using MathNet.Numerics.Data.Matlab;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 using Serilog;
 
@@ -111,6 +112,7 @@ public class LogDataService
                         keyValuePair.Value
                     )
                 );
+                DenseVector.Build.DenseOfArray(keyValuePair.Value);
             }
 
             await Task.Run(() => MatlabWriter.Write(fileName + ".mat", exportMatDict));
@@ -230,7 +232,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
         if (index <= DataLength) DataLength = index;
         for (var i = DataLength; i < LogData.Length; i++)
         {
-            LogData[i] = LogData[DataLength-1]; // fill the rest with last value
+            LogData[i] = LogData[DataLength - 1]; // fill the rest with last value
         }
         Log.Information("{File} ideal data length: {DataLength}, actual data length: {ActualLength}",
             FilePath, LogData.Length, index);

@@ -59,7 +59,14 @@
                                 Search="@_searchAvailableSymbolName"
                                 CustomFilter="FilterSymbolBySimilarityScore"
                                 ResizeMode="DataTableResizeMode.Auto"
-                                Dense>
+                                Dense
+                                FooterProps="@(props => {
+                                    props.ShowFirstLastPage = true;
+                                    props.FirstIcon = "mdi-page-first";
+                                    props.LastIcon = "mdi-page-last";
+                                    props.PrevIcon = "mdi-chevron-left";
+                                    props.NextIcon = "mdi-chevron-right";
+                                    })">
                         <ItemColContent>
                             @switch (context.Header.Value)
                             {

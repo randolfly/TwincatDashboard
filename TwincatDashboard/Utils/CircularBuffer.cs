@@ -1,9 +1,10 @@
 ﻿using System.Buffers;
 
 namespace TwincatDashboard.Utils;
+
 /// <summary>
 /// Initializes a new instance of the <see cref="CircularBuffer{T}"/> class.
-/// 
+///
 /// </summary>
 /// <param name='capacity'>
 /// Buffer capacity. Must be positive.
@@ -34,7 +35,8 @@ public class CircularBuffer<T>(int capacity) : IDisposable
     /// add item to buffer
     /// </summary>
     /// <param name="item"></param>
-    public void Add(T item) {
+    public void Add(T item)
+    {
         _buffer[_end] = item;
         if (IsFull)
         {
@@ -43,7 +45,8 @@ public class CircularBuffer<T>(int capacity) : IDisposable
         _end = (++_end) % Capacity;
     }
 
-    public ArraySegment<T> RemoveRange(int size) {
+    public ArraySegment<T> RemoveRange(int size)
+    {
         var result = new ArraySegment<T>();
         size = Math.Min(size, Size);
         if (_end >= _start)
@@ -61,11 +64,13 @@ public class CircularBuffer<T>(int capacity) : IDisposable
         return result;
     }
 
-    public void Dispose() {
+    public void Dispose()
+    {
         ReturnBufferToArrayPool();
     }
 
-    public void ReturnBufferToArrayPool() {
+    public void ReturnBufferToArrayPool()
+    {
         if (_buffer != null)
         {
             ArrayPool.Return(_buffer);

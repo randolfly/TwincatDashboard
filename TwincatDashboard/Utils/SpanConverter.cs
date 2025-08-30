@@ -4,7 +4,9 @@ namespace TwincatDashboard.Utils;
 
 public static class SpanConverter
 {
-    public static T ConvertTo<T>(ReadOnlySpan<byte> span) where T : struct {
+    public static T ConvertTo<T>(ReadOnlySpan<byte> span)
+        where T : struct
+    {
         if (span.Length < Marshal.SizeOf<T>())
         {
             throw new ArgumentException("The span is too small to contain the specified type.");
@@ -13,7 +15,8 @@ public static class SpanConverter
         return MemoryMarshal.Read<T>(span);
     }
 
-    public static object ConvertTo(ReadOnlySpan<byte> span, Type targetType) {
+    public static object ConvertTo(ReadOnlySpan<byte> span, Type targetType)
+    {
         if (span.IsEmpty || span.Length == 0)
         {
             throw new ArgumentException("Span is null or empty.", nameof(span));
@@ -84,9 +87,14 @@ public static class SpanConverter
                 }
                 break;
             default:
-                throw new NotSupportedException($"Conversion to type '{targetType}' is not supported.");
+                throw new NotSupportedException(
+                    $"Conversion to type '{targetType}' is not supported."
+                );
         }
 
-        throw new ArgumentException("Span does not contain enough data to convert to the specified type.", nameof(span));
+        throw new ArgumentException(
+            "Span does not contain enough data to convert to the specified type.",
+            nameof(span)
+        );
     }
 }

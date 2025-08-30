@@ -60,6 +60,7 @@ public class SymbolInfo(ISymbol symbol)
         }
     }
 
+    public bool IsSnapshot { get; set; } = false;
 
     public bool IsSlowLog => !IsQuickLog;
 

@@ -1,4 +1,3 @@
-using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -6,10 +5,8 @@ using System.Text;
 
 namespace TwincatDashboard.Utils;
 
-public static class MatlabWriter
-{
-    public static void WriteMatFileHeader(Stream stream)
-    {
+public static class MatlabWriter {
+    public static void WriteMatFileHeader(Stream stream) {
         // Write MAT-file header (128 bytes)
         var header = new byte[128];
         // 1. Description (max 116 bytes)
@@ -33,8 +30,7 @@ public static class MatlabWriter
         ReadOnlySpan<double> data,
         int rows,
         int cols
-    )
-    {
+    ) {
         // --- Begin Data Element ---
         // Data type: miMATRIX  (14)
         // Write tag: type (4 bytes) + size (4 bytes)
@@ -86,8 +82,7 @@ public static class MatlabWriter
             stream.Write(new byte[8 - ((data.Length * 8) % 8)], 0, 8 - ((data.Length * 8) % 8)); // padding
     }
 
-    private static int CalcMatrixBytes(string name, int rows, int cols)
-    {
+    private static int CalcMatrixBytes(string name, int rows, int cols) {
         int nameLen = name.Length;
         int dataLen = rows * cols * 8;
         // 1. Array Flags tag+data (8+8)

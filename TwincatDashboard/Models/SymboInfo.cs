@@ -2,8 +2,7 @@
 
 namespace TwincatDashboard.Models;
 
-public class SymbolInfo(ISymbol symbol)
-{
+public class SymbolInfo(ISymbol symbol) {
     public ISymbol Symbol { get; set; } = symbol;
     public string Type => Symbol.DataType?.ToString() ?? "unknown";
     public string FullName => Symbol.InstancePath;
@@ -17,11 +16,9 @@ public class SymbolInfo(ISymbol symbol)
     private bool _isQuickLog = false;
     private bool _isPlot = false;
 
-    public bool IsLog
-    {
+    public bool IsLog {
         get => _isLog;
-        set
-        {
+        set {
             _isLog = value;
             if (value) return;
             _isQuickLog = false;
@@ -29,31 +26,23 @@ public class SymbolInfo(ISymbol symbol)
         }
     }
 
-    public bool IsQuickLog
-    {
+    public bool IsQuickLog {
         get => _isQuickLog;
-        set
-        {
+        set {
             _isQuickLog = value;
-            if (value)
-            {
+            if (value) {
                 _isLog = true;
-            }
-            else
-            {
+            } else {
                 _isPlot = false;
             }
         }
     }
 
-    public bool IsPlot
-    {
+    public bool IsPlot {
         get => _isPlot;
-        set
-        {
+        set {
             _isPlot = value;
-            if (value)
-            {
+            if (value) {
                 _isLog = true;
                 _isQuickLog = true;
             }

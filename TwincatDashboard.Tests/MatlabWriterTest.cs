@@ -1,16 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using TwincatDashboard.Utils;
-using Xunit;
+﻿using TwincatDashboard.Utils;
 
 namespace TwincatDashboard.Tests;
 
-public class MatlabWriterTests
-{
+public class MatlabWriterTests {
     [Fact]
-    public void WriteMatFileHeader_Writes128BytesHeader()
-    {
+    public void WriteMatFileHeader_Writes128BytesHeader() {
         using var ms = new MemoryStream();
         MatlabWriter.WriteMatFileHeader(ms);
         Assert.Equal(128, ms.Length);
@@ -23,8 +17,7 @@ public class MatlabWriterTests
     }
 
     [Fact]
-    public void WriteMatrix_WritesValidMatMatrix()
-    {
+    public void WriteMatrix_WritesValidMatMatrix() {
         using var ms = new MemoryStream();
         MatlabWriter.WriteMatFileHeader(ms);
         ReadOnlySpan<double> data = [1.1, 2.2, 3.3, 4.4];
@@ -43,8 +36,7 @@ public class MatlabWriterTests
     }
 
     [Fact]
-    public void GenerateMatlabFile_ValidateByMatlab()
-    {
+    public void GenerateMatlabFile_ValidateByMatlab() {
         using var fs = new FileStream(
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),

@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 
 using ScottPlot;
@@ -9,8 +8,7 @@ using Timer = System.Timers.Timer;
 
 namespace TwincatDashboard.Windows;
 
-public partial class LogPlotWindow : Window, IDisposable
-{
+public partial class LogPlotWindow : Window, IDisposable {
     private string LogName { get; set; }
     private readonly DataStreamer _dataStreamer;
     private readonly Timer _updatePlotTimer = new() { Interval = 50, Enabled = true, AutoReset = true };
@@ -31,10 +29,8 @@ public partial class LogPlotWindow : Window, IDisposable
         _dataStreamer.ViewScrollLeft();
 
         // setup a timer to request a render periodically
-        _updatePlotTimer.Elapsed += (s, e) =>
-        {
-            if (_dataStreamer.HasNewData)
-            {
+        _updatePlotTimer.Elapsed += (s, e) => {
+            if (_dataStreamer.HasNewData) {
                 LogPlot.Refresh();
             }
 
@@ -95,8 +91,7 @@ public partial class LogPlotWindow : Window, IDisposable
         LogPlot.Refresh();
 
         // wpf mouse move event, different from avalonia (PointerMoved)
-        LogPlot.MouseMove += (s, e) =>
-        {
+        LogPlot.MouseMove += (s, e) => {
             var currentPosition = e.GetPosition(LogPlot);
             // determine where the mouse is and get the nearest point
             Pixel mousePixel = new(currentPosition.X * LogPlot.DisplayScale, currentPosition.Y * LogPlot.DisplayScale);
@@ -104,8 +99,7 @@ public partial class LogPlotWindow : Window, IDisposable
             var nearest = _fullDataSignal.GetNearest(mouseLocation,
                 LogPlot.Plot.LastRender);
 
-            switch (nearest.IsReal)
-            {
+            switch (nearest.IsReal) {
                 // place the crosshair over the highlighted point
                 case true:
                     _fullDataCrosshair.IsVisible = true;

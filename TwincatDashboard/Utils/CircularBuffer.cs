@@ -10,8 +10,7 @@ namespace TwincatDashboard.Utils;
 /// Buffer capacity. Must be positive.
 /// </param>
 public class CircularBuffer<T>(int capacity) : IDisposable
-    where T : struct
-{
+    where T : struct {
     private static ArrayPool<T> ArrayPool => ArrayPool<T>.Shared;
 
     private readonly T[] _buffer = ArrayPool.Rent(capacity);
@@ -35,26 +34,20 @@ public class CircularBuffer<T>(int capacity) : IDisposable
     /// add item to buffer
     /// </summary>
     /// <param name="item"></param>
-    public void Add(T item)
-    {
+    public void Add(T item) {
         _buffer[_end] = item;
-        if (IsFull)
-        {
+        if (IsFull) {
             _start = (++_start) % Capacity;
         }
         _end = (++_end) % Capacity;
     }
 
-    public ArraySegment<T> RemoveRange(int size)
-    {
+    public ArraySegment<T> RemoveRange(int size) {
         var result = new ArraySegment<T>();
         size = Math.Min(size, Size);
-        if (_end >= _start)
-        {
+        if (_end >= _start) {
             result = new ArraySegment<T>(_buffer, _start, size);
-        }
-        else
-        {
+        } else {
             var result1 = new ArraySegment<T>(_buffer, _start, Capacity - _start);
             var result2 = new ArraySegment<T>(_buffer, 0, size - Capacity + _start);
             result = new ArraySegment<T>(result1.Concat(result2).ToArray());
@@ -64,15 +57,12 @@ public class CircularBuffer<T>(int capacity) : IDisposable
         return result;
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         ReturnBufferToArrayPool();
     }
 
-    public void ReturnBufferToArrayPool()
-    {
-        if (_buffer != null)
-        {
+    public void ReturnBufferToArrayPool() {
+        if (_buffer != null) {
             ArrayPool.Return(_buffer);
         }
     }

@@ -1,16 +1,15 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+
 using TwincatDashboard.Models;
 
 namespace TwincatDashboard.Services;
 
-public static class AppConfigService
-{
+public static class AppConfigService {
     public static AppConfig AppConfig { get; set; } = new();
 
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
-    {
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new() {
         WriteIndented = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
@@ -19,8 +18,7 @@ public static class AppConfigService
     /// 从json文件加载配置，只应该在初始化Service时调用一次（否则其余地方的AppConfig读取不到最新的配置）【或者给AppConfig下的子config DeepClone】
     /// </summary>
     /// <param name="configFileFullName">配置文件地址</param>
-    public static void LoadConfig(string configFileFullName)
-    {
+    public static void LoadConfig(string configFileFullName) {
         Debug.WriteLine($"LoadConfig: {configFileFullName}");
         if (!File.Exists(configFileFullName)) return;
         using var fs = new FileStream(configFileFullName, FileMode.Open);
@@ -31,8 +29,7 @@ public static class AppConfigService
     /// 存储配置到json文件
     /// </summary>
     /// <param name="configFileFullName">配置文件地址</param>
-    public static void SaveConfig(string configFileFullName)
-    {
+    public static void SaveConfig(string configFileFullName) {
         Debug.WriteLine($"SaveConfig: {configFileFullName}");
         if (!Directory.Exists(Path.GetDirectoryName(configFileFullName)))
             Directory.CreateDirectory(Path.GetDirectoryName(configFileFullName)!);

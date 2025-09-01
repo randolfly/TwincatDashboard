@@ -18,11 +18,10 @@ public static class MatlabWriter {
         // 2. Subsystem data offset (8 bytes, usually zero)
         // 3. Version (2 bytes) + Endian indicator (2 bytes)
         header[124] = 0x00; // version
-        header[125] = 0x01; // version
+        header[125] = 0x0; // version
         header[126] = (byte)'I'; // Little Endian indicator: 'IM'
         header[127] = (byte)'M';
         stream.Write(header, 0, 128);
-        stream.Flush();
     }
 
     /// <summary>
@@ -87,8 +86,6 @@ public static class MatlabWriter {
         // Write double data as bytes, no array copy
         var doubleSpan = MemoryMarshal.Cast<double, byte>(data);
         stream.Write(doubleSpan);
-
-        stream.Flush();
     }
 
     private static int CalMatrixBytes(string name, int rows, int cols) {

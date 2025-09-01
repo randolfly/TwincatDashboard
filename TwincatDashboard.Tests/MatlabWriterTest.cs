@@ -30,6 +30,9 @@ public class MatlabWriterTests {
         ReadOnlySpan<double> data = new ReadOnlySpan<double>(testData);
         MatlabWriter.WriteMatFileHeader(fs);
         MatlabWriter.WriteArray(fs, "test_list", data, data.Length);
+        MatlabWriter.WriteArray(fs, "test_list_1", data, 3);
+        MatlabWriter.WriteArray(fs, "test_list_2", data, 5);
+
         Assert.True(data.Length > 2);
     }
 }

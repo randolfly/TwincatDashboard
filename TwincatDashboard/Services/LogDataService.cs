@@ -4,9 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
-
 using Serilog;
 
 using TwincatDashboard.Models;
@@ -97,21 +94,31 @@ public class LogDataService {
         }
 
         if (exportTypes.Contains("mat")) {
-            var exportMatDict = new Dictionary<string, Matrix<double>>();
-            foreach (var keyValuePair in dataSrc) {
-                // TODO: The Matrix.Build.Dense method require an array instead of a Span, which leads to further array copy
-                //var arraySlice = new ReadOnlySpan<double>(
-                //    keyValuePair.Value, 0, dataLength);
-                exportMatDict.Add(
-                    FormatNameForMatFile(keyValuePair.Key),
-                    Matrix<double>.Build.Dense(keyValuePair.Value.Length, 1, keyValuePair.Value)
-                );
-                DenseVector.Build.DenseOfArray(keyValuePair.Value);
-            }
+            //var exportMatDict = new Dictionary<string, Matrix<double>>();
+            //foreach (var keyValuePair in dataSrc) {
+            //    // TODO: The Matrix.Build.Dense method require an array instead of a Span, which leads to further array copy
+            //    //var arraySlice = new ReadOnlySpan<double>(
+            //    //    keyValuePair.Value, 0, dataLength);
+            //    exportMatDict.Add(
+            //        FormatNameForMatFile(keyValuePair.Key),
+            //        Matrix<double>.Build.Dense(keyValuePair.Value.Length, 1, keyValuePair.Value)
+            //    );
+            //    DenseVector.Build.DenseOfArray(keyValuePair.Value);
+            //}
 
-            await Task.Run(() =>
-                MathNet.Numerics.Data.Matlab.MatlabWriter.Write(fileName + ".mat", exportMatDict)
-            );
+            //await Task.Run(() =>
+            //    MathNet.Numerics.Data.Matlab.MatlabWriter.Write(fileName + ".mat", exportMatDict)
+            //);
+            using var fs = new FileStream(fileName + ".mat", FileMode.Create, FileAccess.Write);
+            MatlabWriter.WriteMatFileHeader(fs);
+            foreach (var keyValuePair in dataSrc) {
+                ReadOnlySpan<double> data = new ReadOnlySpan<double>(keyValuePair.Value);
+                MatlabWriter.WriteArray(
+                    fs,
+                    FormatNameForMatFile(keyValuePair.Key),
+                    data,
+                    dataLength);
+            }
         }
 
         static string FormatNameForMatFile(string symbolName) {

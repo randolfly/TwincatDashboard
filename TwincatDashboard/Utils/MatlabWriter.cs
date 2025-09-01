@@ -18,7 +18,7 @@ public static class MatlabWriter {
         // 2. Subsystem data offset (8 bytes, usually zero)
         // 3. Version (2 bytes) + Endian indicator (2 bytes)
         header[124] = 0x00; // version
-        header[125] = 0x0; // version
+        header[125] = 0x01; // version
         header[126] = (byte)'I'; // Little Endian indicator: 'IM'
         header[127] = (byte)'M';
         stream.Write(header, 0, 128);
@@ -80,11 +80,11 @@ public static class MatlabWriter {
         // Data
         Span<byte> dataTag = stackalloc byte[8];
         BinaryPrimitives.WriteInt32LittleEndian(dataTag[..4], 9); // miDOUBLE
-        BinaryPrimitives.WriteInt32LittleEndian(dataTag[4..8], data.Length * 8);
+        BinaryPrimitives.WriteInt32LittleEndian(dataTag[4..8], rows * 8);
         stream.Write(dataTag);
 
         // Write double data as bytes, no array copy
-        var doubleSpan = MemoryMarshal.Cast<double, byte>(data);
+        var doubleSpan = MemoryMarshal.Cast<double, byte>(data[..rows]);
         stream.Write(doubleSpan);
     }
 

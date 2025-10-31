@@ -109,16 +109,18 @@ public class LogDataService {
             //await Task.Run(() =>
             //    MathNet.Numerics.Data.Matlab.MatlabWriter.Write(fileName + ".mat", exportMatDict)
             //);
-            using var fs = new FileStream(fileName + ".mat", FileMode.Create, FileAccess.Write);
-            MatlabWriter.WriteMatFileHeader(fs);
-            foreach (var keyValuePair in dataSrc) {
-                ReadOnlySpan<double> data = new ReadOnlySpan<double>(keyValuePair.Value);
-                MatlabWriter.WriteArray(
-                    fs,
-                    FormatNameForMatFile(keyValuePair.Key),
-                    data,
-                    dataLength);
-            }
+            await Task.Run(() => {
+                using var fs = new FileStream(fileName + ".mat", FileMode.Create, FileAccess.Write);
+                MatlabWriter.WriteMatFileHeader(fs);
+                foreach (var keyValuePair in dataSrc) {
+                    ReadOnlySpan<double> data = new ReadOnlySpan<double>(keyValuePair.Value);
+                    MatlabWriter.WriteArray(
+                        fs,
+                        FormatNameForMatFile(keyValuePair.Key),
+                        data,
+                        dataLength);
+                }
+            });
         }
 
         static string FormatNameForMatFile(string symbolName) {

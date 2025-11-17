@@ -415,6 +415,10 @@
         }
 
         // export
+        // check if data folder exists, if not, create it
+        if (!Directory.Exists(_logConfig.FolderName)) {
+            Directory.CreateDirectory(_logConfig.FolderName);
+        }
         var exportQuickDataLength = LogDataService.QuickLogDict.Values.Min(channel => channel.DataLength);
         var exportSlowDataLength = LogDataService.SlowLogDict.Values.Min(list => list.Count);
         await LogDataService.ExportDataAsync(quickLogResult,

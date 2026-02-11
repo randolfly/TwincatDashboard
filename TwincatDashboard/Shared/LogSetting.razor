@@ -1,9 +1,5 @@
-﻿@inject AdsComService AdsComService
-@using Microsoft.Win32
-@using OneOf.Types
-@using TwincatDashboard.Constants
-@using TwincatDashboard.Models
-@using TwincatDashboard.Services
+﻿@using Microsoft.Win32
+@inject AdsComService AdsComService
 
 <div class="container">
   <div class="Folder">
@@ -20,6 +16,10 @@
                 HideDetails="@("auto")"
                 @bind-Value="FileName"
                 AppendIcon="mdi-file"/>
+  </div>
+  <div class="ReadNamespace">
+    <MSelect @bind-Value="ReadNamespace" Items="AvailableNamespace" Chips Multiple Dense ItemText="u => u"
+             ItemValue="u => u" Label="ReadNamespace"/>
   </div>
   <div class="QuickPeriod">
     <MTextField Outlined Dense
@@ -47,10 +47,9 @@
     <MSelect @bind-Value="ExportLogTypes"
              Items="AppConstants.SupportedLogFileTypes"
              Chips Multiple Dense
-             ItemText="u => u"
-             ItemValue="u => u"
-             Label="Chips"/>
+             ItemText="u => u" ItemValue="u => u" Label="LogType"/>
   </div>
+
   <div class="SaveConfig">
     <div style="display: flex; height: 80%; flex-direction: row;gap: 12px;  align-items: center">
       <MButton Color="primary" Outlined Dense
@@ -73,11 +72,14 @@
   public int QuickLogPeriod { get; set; } = 2;
   public int SlowLogPeriod { get; set; } = 5000;
   public List<string> ExportLogTypes = ["mat"];
+  public List<string> ReadNamespace = ["MAIN", "GVL", "TwinCAT_SystemInfoVarList"];
+
+  private List<string> AvailableNamespace = [];
 
   private const int SlowLogPeriodMin = 2000;
   private const int SlowLogPeriodMax = 10000;
 
-  private Func<int, StringBoolean> _numberRule = value => value is >= SlowLogPeriodMin and <= SlowLogPeriodMax  ? true : "Must between 2000 and 10000";
+  private Func<int, StringBoolean> _numberRule = value => value is >= SlowLogPeriodMin and <= SlowLogPeriodMax ? true : "Must between 2000 and 10000";
 
   private LogConfig LogConfig { get; set; } = AppConfigService.AppConfig.LogConfig;
 
@@ -88,8 +90,10 @@
     FileName = LogConfig.FileName;
     SlowLogPeriod = LogConfig.SlowLogPeriod;
     ExportLogTypes = LogConfig.FileType;
+    ReadNamespace = LogConfig.ReadNamespace;
 
     QuickLogPeriod = await AdsComService.GetTaskCycleTimeAsync();
+    AvailableNamespace = AdsComService.GetAvailableNamespaces();
     LogConfig.QuickLogPeriod = QuickLogPeriod;
   }
 
@@ -100,6 +104,7 @@
     LogConfig.QuickLogPeriod = QuickLogPeriod;
     LogConfig.SlowLogPeriod = SlowLogPeriod;
     LogConfig.FileType = ExportLogTypes;
+    LogConfig.ReadNamespace = ReadNamespace;
     AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
     Log.Information("LogConfig saved.");
   }

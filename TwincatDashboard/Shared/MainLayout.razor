@@ -1,9 +1,6 @@
 ﻿@inject AdsComService AdsComService
-
 @using System.Diagnostics
 @using TwinCAT.Ads
-@using TwincatDashboard.Models
-@using TwincatDashboard.Services
 @inherits LayoutComponentBase
 
 <MApp>
@@ -148,7 +145,7 @@
     new() { Name = "DataLog", Icon = "mdi-home", Href = "/" },
     // new() { Name = "Dashboard", Icon = "mdi-list-box", Href = "/dashboard" },
     // new() { Name = "Experiment", Icon = "mdi-list-box", Href = "/experiment" },
-    new() { Name = "SnapShot", Icon = "mdi-camera", Href = "/data-snapshot" },
+    new() { Name = "SnapShot", Icon = "mdi-camera", Href = "/data-snapshot" }
   ];
 
   public string AdsStateText { get; set; } = "Invalid";
@@ -184,12 +181,12 @@
     AdsStateText = adsState.ToString();
     AdsStateColor = adsState switch
     {
-      AdsState.Invalid => "#607D8B",//grey
-      AdsState.Stop => "#4CAF50",//green
-      AdsState.Run => "#2196F3",//blue
-      _ => "#F44336"//red
+      AdsState.Invalid => "#607D8B", //grey
+      AdsState.Stop => "#4CAF50", //green
+      AdsState.Run => "#2196F3", //blue
+      _ => "#F44336" //red
     };
-        Log.Information("Ads server state: {AdsState}", AdsComService.GetAdsState());
+    Log.Information("Ads server state: {AdsState}", AdsComService.GetAdsState());
   }
 
   private async Task DisConnectAdsServerAsync()

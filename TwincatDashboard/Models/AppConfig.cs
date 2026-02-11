@@ -1,14 +1,13 @@
 ﻿using System.IO;
 using System.Reflection;
 using System.Text.Json.Serialization;
-
 using TwinCAT.Ads;
-
 using TwincatDashboard.Constants;
 
 namespace TwincatDashboard.Models;
 
-public class AppConfig {
+public class AppConfig
+{
     public AdsConfig AdsConfig { get; set; } = new();
     public LogConfig LogConfig { get; set; } = new();
 
@@ -27,15 +26,20 @@ public class AppConfig {
 
     public static string AppLogFileFullName =>
         Path.Combine(FolderName, "log", AppName + "_log_" + ".txt");
+
     #endregion
 }
 
-public class AdsConfig {
+public class AdsConfig
+{
     public string NetId { get; set; } = AmsNetId.Local.ToString();
     public int PortId { get; set; } = 851;
 }
 
-public class LogConfig {
+public class LogConfig
+{
+    public List<string> ReadNamespace { get; set; } = ["MAIN", "GVL", "TwinCAT_SystemInfoVarList"];
+
     // log symbol period in ms
     public int QuickLogPeriod { get; set; } = 2;
     public int SlowLogPeriod { get; set; } = 5000;
@@ -47,14 +51,16 @@ public class LogConfig {
 
     public string FolderName { get; set; } =
         Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+
     public string FileName { get; set; } = "log";
 
-    [JsonIgnore]
-    public string TempFileFullName => Path.Combine(FolderName, FileName);
+    [JsonIgnore] public string TempFileFullName => Path.Combine(FolderName, FileName);
 
     [JsonIgnore]
-    public string QuickLogFileFullName {
-        get {
+    public string QuickLogFileFullName
+    {
+        get
+        {
             var datetime = DateTime.Now;
             var fileName =
                 FileName
@@ -68,8 +74,10 @@ public class LogConfig {
     }
 
     [JsonIgnore]
-    public string SlowLogFileFullName {
-        get {
+    public string SlowLogFileFullName
+    {
+        get
+        {
             var datetime = DateTime.Now;
             var fileName =
                 FileName

@@ -1,26 +1,41 @@
-﻿.container {  display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr) auto;
-    gap: 12px 12px;
-    grid-auto-flow: row;
-    justify-content: stretch;
-    align-content: stretch;
-    justify-items: stretch;
-    align-items: stretch;
-    grid-template-areas:
-    "Folder File"
-    "QuickPeriod SlowPeriod"
-    "LogType SaveConfig";
+﻿.container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
 }
 
-.Folder { grid-area: Folder; }
+.Folder {
+    grid-column: span 2 / span 2;
+}
 
-.File { grid-area: File; }
+.File {
+    grid-column: span 2 / span 2;
+    grid-column-start: 3;
+}
 
-.QuickPeriod { grid-area: QuickPeriod; }
+.ReadNamespace {
+    grid-column: span 2 / span 2;
+    grid-row-start: 2;
+}
 
-.SlowPeriod { grid-area: SlowPeriod; }
+.QuickPeriod {
+    grid-column-start: 3;
+    grid-row-start: 2;
+}
 
-.LogType { grid-area: LogType; }
+.SlowPeriod {
+    grid-column-start: 4;
+    grid-row-start: 2;
+}
 
-.SaveConfig { grid-area: SaveConfig; }
+.LogType {
+    grid-column: span 2 / span 2;
+    grid-row-start: 3;
+}
+
+.SaveConfig {
+    grid-column: span 2 / span 2;
+    grid-column-start: 3;
+    grid-row-start: 3;
+}

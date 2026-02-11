@@ -1,20 +1,19 @@
 ﻿using System.Text;
 using System.Windows;
-
 using Microsoft.Extensions.DependencyInjection;
-
 using Serilog;
-
 using TwincatDashboard.Models;
 using TwincatDashboard.Services;
 
 namespace TwincatDashboard;
 
 /// <summary>
-/// Interaction logic for MainWindow.xaml
+///     Interaction logic for MainWindow.xaml
 /// </summary>
-public partial class MainWindow : Window {
-    public MainWindow() {
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
         InitializeComponent();
 
         var serviceCollection = new ServiceCollection();
@@ -36,7 +35,7 @@ public partial class MainWindow : Window {
             )
             .CreateLogger();
 
-        serviceCollection.AddSerilog(logger: Log.Logger, dispose: true);
+        serviceCollection.AddSerilog(Log.Logger, true);
 
         AppConfigService.LoadConfig(AppConfig.ConfigFileFullName);
 #if DEBUG

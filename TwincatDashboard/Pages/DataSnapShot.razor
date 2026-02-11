@@ -1,230 +1,257 @@
 ﻿@page "/data-snapshot"
 @using FuzzySharp
-@using TwinCAT.Ads.TypeSystem
 @using TwinCAT.Ads
+@using TwinCAT.Ads.TypeSystem
 @inject AdsComService AdsComService
 @inject LogPlotService LogPlotService
 
 <div style="height: 100vh; padding-bottom: 8px">
-    <MTabs Style="height: 100%" Grow>
-        <MTab>Select Symbols</MTab>
-        <MTab Disabled=!AdsComService.IsAdsConnected OnClick="UpdateSnapshotSymbols">Take Snapshots</MTab>
-        <MTabItem>
-            <MCard Class="overflow-auto">
-                <MCardTitle>
-                    <div class="flex-container">
-                        <div>Available Symbols</div>
-                        <div>
-                            <MTooltip Bottom>
-                                <ActivatorContent>
-                                    <MButton @attributes="@context.Attrs"
-                                             Color="primary"
-                                             OnClick="GetAvailableSymbols"
-                                             Icon>
-                                        <MIcon>mdi-refresh</MIcon>
-                                    </MButton>
-                                </ActivatorContent>
-                                <ChildContent>
-                                    <span>get ads symbols</span>
-                                </ChildContent>
-                            </MTooltip>
-                        </div>
-                        <div style="flex-grow: 1;" Class="mx-2; mt-n2">
-                            <MInputsFilter OnFieldChanged="OnSearchAvailableSymbolNameChanged">
-                                <MTextField @bind-Value="_searchAvailableSymbolTmpName"
-                                            AppendIcon="mdi-magnify"
-                                            Label="Search"
-                                            SingleLine
-                                            PersistentPlaceholder
-                                            Placeholder="Press enter to trigger search action"
-                                            Clearable
-                                            HideDetails="true"></MTextField>
-                            </MInputsFilter>
-                        </div>
-                    </div>
-                </MCardTitle>
-                @if (_availableSymbols.Count == 0) {
-                    <div>
-                        <MCardText>
-                            No available symbols, Update the list by clicking the refresh button
-                        </MCardText>
-                    </div>
-                } else {
-                    <MDataTable Headers="_availableSymbolHeaders"
-                                Items="_availableSymbols"
-                                ItemKey="s => s.FullName"
-                                Search="@_searchAvailableSymbolName"
-                                CustomFilter="FilterSymbolBySimilarityScore"
-                                ResizeMode="DataTableResizeMode.Auto"
-                                Dense
-                                FooterProps="@(props => {
-                                    props.ShowFirstLastPage = true;
-                                    props.FirstIcon = "mdi-page-first";
-                                    props.LastIcon = "mdi-page-last";
-                                    props.PrevIcon = "mdi-chevron-left";
-                                    props.NextIcon = "mdi-chevron-right";
-                                })">
-                    <ItemColContent>
-                        @switch (context.Header.Value) {
-                                case nameof(SymbolInfo.IsSnapshot):
-                                    <MSimpleCheckbox @bind-Value="context.Item.IsSnapshot" />
-                                    break;
-                                default:
-                                    @context.Value
-                                    break;
-                            }
-                        </ItemColContent>
-                    </MDataTable>
-                }
-            </MCard>
-        </MTabItem>
+  <MTabs Style="height: 100%" Grow>
+    <MTab>Select Symbols</MTab>
+    <MTab Disabled="!AdsComService.IsAdsConnected" OnClick="UpdateSnapshotSymbols">Take Snapshots</MTab>
+    <MTabItem>
+      <MCard Class="overflow-auto">
+        <MCardTitle>
+          <div class="flex-container">
+            <div>Available Symbols</div>
+            <div>
+              <MTooltip Bottom>
+                <ActivatorContent>
+                  <MButton @attributes="@context.Attrs"
+                           Color="primary"
+                           OnClick="GetAvailableSymbols"
+                           Icon>
+                    <MIcon>mdi-refresh</MIcon>
+                  </MButton>
+                </ActivatorContent>
+                <ChildContent>
+                  <span>get ads symbols</span>
+                </ChildContent>
+              </MTooltip>
+            </div>
+            <div style="flex-grow: 1;" Class="mx-2; mt-n2">
+              <MInputsFilter OnFieldChanged="OnSearchAvailableSymbolNameChanged">
+                <MTextField @bind-Value="_searchAvailableSymbolTmpName"
+                            AppendIcon="mdi-magnify"
+                            Label="Search"
+                            SingleLine
+                            PersistentPlaceholder
+                            Placeholder="Press enter to trigger search action"
+                            Clearable
+                            HideDetails="true"></MTextField>
+              </MInputsFilter>
+            </div>
+          </div>
+        </MCardTitle>
+        @if (_availableSymbols.Count == 0)
+        {
+          <div>
+            <MCardText>
+              No available symbols, Update the list by clicking the refresh button
+            </MCardText>
+          </div>
+        }
+        else
+        {
+          <MDataTable Headers="_availableSymbolHeaders"
+                      Items="_availableSymbols"
+                      ItemKey="s => s.FullName"
+                      Search="@_searchAvailableSymbolName"
+                      CustomFilter="FilterSymbolBySimilarityScore"
+                      ResizeMode="DataTableResizeMode.Auto"
+                      Dense
+                      FooterProps="@(props =>
+                                   {
+                                     props.ShowFirstLastPage = true;
+                                     props.FirstIcon = "mdi-page-first";
+                                     props.LastIcon = "mdi-page-last";
+                                     props.PrevIcon = "mdi-chevron-left";
+                                     props.NextIcon = "mdi-chevron-right";
+                                   })">
+            <ItemColContent>
+              @switch (context.Header.Value)
+              {
+                case nameof(SymbolInfo.IsSnapshot):
+                  <MSimpleCheckbox @bind-Value="context.Item.IsSnapshot"/>
+                  break;
+                default:
+                  @context.Value
+                  break;
+              }
+            </ItemColContent>
+          </MDataTable>
+        }
+      </MCard>
+    </MTabItem>
 
-        <MTabItem>
-            <MCard>
-                <MCardTitle>
-                    <div class="flex-container">
-                        <MButton Color="primary" Outlined OnClick="TakeSymbolSnapShotAsync">
-                            Take SnapShot
-                        </MButton>
-                        <MButton Color="primary" Outlined OnClick="ExportSnapShot">
-                            Export SnapShot
-                        </MButton>
-                    </div>
-                </MCardTitle>
-                @if (SnapshotSymbols.Count == 0) {
-                    <div>
-                        <MCardText>
-                            No snapshot symbols selected, Update the list by selecting symbols from the available symbols
-                        </MCardText>
-                    </div>
-                } else {
-                    <div>
-                        <MSimpleTable Height="650">
-                            <thead>
-                                <tr>
-                                    @foreach (var symbol in SnapshotSymbols) {
-                                        <th class="text-left">
-                                            @symbol.SymbolInfo.FullName
-                                        </th>
-                                    }
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (var id = 0; id < _snapShotNumber; id++) {
-                                    <tr>
-                                        @foreach (var symbol in SnapshotSymbols) {
-                                            <td>@(symbol.Value.Count > id ? symbol.Value[id].ToString("F2") : "N/A")</td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                        </MSimpleTable>
-                    </div>
+    <MTabItem>
+      <MCard>
+        <MCardTitle>
+          <div class="flex-container">
+            <MButton Color="primary" Outlined OnClick="TakeSymbolSnapShotAsync">
+              Take SnapShot
+            </MButton>
+            <MButton Color="primary" Outlined OnClick="ExportSnapShot">
+              Export SnapShot
+            </MButton>
+          </div>
+        </MCardTitle>
+        @if (SnapshotSymbols.Count == 0)
+        {
+          <div>
+            <MCardText>
+              No snapshot symbols selected, Update the list by selecting symbols from the available symbols
+            </MCardText>
+          </div>
+        }
+        else
+        {
+          <div>
+            <MSimpleTable Height="650">
+              <thead>
+              <tr>
+                @foreach (var symbol in SnapshotSymbols)
+                {
+                  <th class="text-left">
+                    @symbol.SymbolInfo.FullName
+                  </th>
                 }
-            </MCard>
-        </MTabItem>
-    </MTabs>
+              </tr>
+              </thead>
+              <tbody>
+              @for (var id = 0; id < _snapShotNumber; id++)
+              {
+                <tr>
+                  @foreach (var symbol in SnapshotSymbols)
+                  {
+                    <td>@(symbol.Value.Count > id ? symbol.Value[id].ToString("F2") : "N/A")</td>
+                  }
+                </tr>
+              }
+              </tbody>
+            </MSimpleTable>
+          </div>
+        }
+      </MCard>
+    </MTabItem>
+  </MTabs>
 </div>
 
 @code {
-    private List<SymbolInfo> _availableSymbols = [];
+  private readonly List<string> _readNamespace = ["MAIN", "GVL", "TwinCAT_SystemInfoVarList"];
 
-    private string? _searchAvailableSymbolName;
-    private string? _searchAvailableSymbolTmpName;
+  private List<SymbolInfo> _availableSymbols = [];
 
-    private List<SnapshotSymbol> SnapshotSymbols = new();
+  private string? _searchAvailableSymbolName;
+  private string? _searchAvailableSymbolTmpName;
 
-    private int _snapShotNumber = 0;
+  private List<SnapshotSymbol> SnapshotSymbols = new();
 
-    private void GetAvailableSymbols() {
-        if (AdsComService.GetAdsState() == AdsState.Invalid) {
-            Log.Information("Ads server is not connected");
-            return;
-        }
+  private int _snapShotNumber;
 
-        _availableSymbols = AdsComService.GetAvailableSymbols();
-        _availableSymbols.Sort((a, b) => string.Compare(a.FullName, b.FullName, StringComparison.Ordinal));
-        Log.Information("Available symbols: {0}", _availableSymbols.Count);
+  private void GetAvailableSymbols()
+  {
+    if (AdsComService.GetAdsState() == AdsState.Invalid)
+    {
+      Log.Information("Ads server is not connected");
+      return;
     }
 
-    private void OnSearchAvailableSymbolNameChanged(InputsFilterFieldChangedEventArgs obj) {
-        _searchAvailableSymbolName = _searchAvailableSymbolTmpName;
-    }
+    _availableSymbols = AdsComService.GetAvailableSymbols(_readNamespace);
+    _availableSymbols.Sort((a, b) => string.Compare(a.FullName, b.FullName, StringComparison.Ordinal));
+    Log.Information("Available symbols: {0}", _availableSymbols.Count);
+  }
 
-    private readonly List<DataTableHeader<SymbolInfo>> _availableSymbolHeaders =
-    [
-        new() { Text = "Snapshot", Value = nameof(SymbolInfo.IsSnapshot), Filterable = false },
-        new() { Text = "FullName", Value = nameof(SymbolInfo.Name), Filterable = false },
-        new() { Text = "Path", Value = nameof(SymbolInfo.Path), Filterable = false },
-        new() { Text = "Type", Value = nameof(SymbolInfo.Type), Filterable = false },
+  private void OnSearchAvailableSymbolNameChanged(InputsFilterFieldChangedEventArgs obj)
+  {
+    _searchAvailableSymbolName = _searchAvailableSymbolTmpName;
+  }
+
+  private readonly List<DataTableHeader<SymbolInfo>> _availableSymbolHeaders =
+  [
+    new() { Text = "Snapshot", Value = nameof(SymbolInfo.IsSnapshot), Filterable = false },
+    new() { Text = "FullName", Value = nameof(SymbolInfo.Name), Filterable = false },
+    new() { Text = "Path", Value = nameof(SymbolInfo.Path), Filterable = false },
+    new() { Text = "Type", Value = nameof(SymbolInfo.Type), Filterable = false }
   ];
 
-    private void UpdateSnapshotSymbols() {
-        SnapshotSymbols = _availableSymbols
-          .Where(s => s.IsSnapshot)
-          .Select(s => new SnapshotSymbol { SymbolInfo = s })
-          .ToList();
-        StateHasChanged();
+  private void UpdateSnapshotSymbols()
+  {
+    SnapshotSymbols = _availableSymbols
+      .Where(s => s.IsSnapshot)
+      .Select(s => new SnapshotSymbol { SymbolInfo = s })
+      .ToList();
+    StateHasChanged();
+  }
+
+  private async Task TakeSymbolSnapShotAsync(MouseEventArgs args)
+  {
+    foreach (var snapshot in SnapshotSymbols)
+    {
+      var dataType = (snapshot.SymbolInfo.Symbol.DataType as DataType)?.ManagedType;
+      if (dataType == null)
+      {
+        Log.Warning("ManagedType is null for symbol: {0}, Raw Type: {1}", snapshot.SymbolInfo.FullName, snapshot.SymbolInfo.Symbol.DataType);
+        return;
+      }
+
+      var value = await AdsComService.ReadPlcSymbolValueAsync(snapshot.SymbolInfo.FullName, dataType);
+      if (value is null)
+      {
+        Log.Warning("Value is null for symbol: {0}, Raw Type: {1}", snapshot.SymbolInfo.FullName, snapshot.SymbolInfo.Symbol.DataType);
+        return;
+      }
+
+      var result = SymbolExtension.ConvertObjectToDouble(value, dataType);
+      snapshot.Value.Add(result);
     }
 
-    private async Task TakeSymbolSnapShotAsync(MouseEventArgs args) {
-        foreach (var snapshot in SnapshotSymbols) {
-            var dataType = (snapshot.SymbolInfo.Symbol.DataType as DataType)?.ManagedType;
-            if (dataType == null) {
-                Log.Warning("ManagedType is null for symbol: {0}, Raw Type: {1}", snapshot.SymbolInfo.FullName, snapshot.SymbolInfo.Symbol.DataType);
-                return;
-            }
+    _snapShotNumber++;
+    StateHasChanged();
+  }
 
-            var value = await AdsComService.ReadPlcSymbolValueAsync(snapshot.SymbolInfo.FullName, dataType);
-            if (value is null) {
-                Log.Warning(messageTemplate: "Value is null for symbol: {0}, Raw Type: {1}", snapshot.SymbolInfo.FullName, snapshot.SymbolInfo.Symbol.DataType);
-                return;
-            }
+  public static IEnumerable<SymbolInfo> FilterSymbolBySimilarityScore(IEnumerable<SymbolInfo> items, IEnumerable<ItemValue<SymbolInfo>> itemValues, string? search)
+  {
+    if (string.IsNullOrEmpty(search)) return items;
+    var searchResults = items
+      .OrderByDescending(s => GetSimilarityScore(search, s));
+    return searchResults;
+  }
 
-            var result = SymbolExtension.ConvertObjectToDouble(value, dataType);
-            snapshot.Value.Add(result);
-        }
+  private static int GetSimilarityScore(string searchText, SymbolInfo symbolInfo)
+  {
+    return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.FullName.ToLower());
+  }
 
-        _snapShotNumber++;
-        StateHasChanged();
+  private void ExportSnapShot(MouseEventArgs args)
+  {
+    // write snapshot to csv file
+    if (SnapshotSymbols.Count == 0) return;
+    var fileName = Path.Combine(
+      Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+      $"Snapshot_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+    using var writer = new StreamWriter(fileName);
+    // write header
+    writer.WriteLine(string.Join(",", SnapshotSymbols.Select(s => s.SymbolInfo.FullName)));
+    // write data
+    for (var i = 0; i < _snapShotNumber; i++)
+    {
+      var row = SnapshotSymbols
+        .Select(s => s.Value.Count > i ? s.Value[i].ToString("F2") : "N/A");
+      writer.WriteLine(string.Join(",", row));
     }
 
-    public static IEnumerable<SymbolInfo> FilterSymbolBySimilarityScore(IEnumerable<SymbolInfo> items, IEnumerable<ItemValue<SymbolInfo>> itemValues, string? search) {
-        if (string.IsNullOrEmpty(search)) return items;
-        var searchResults = items
-          .OrderByDescending(s => GetSimilarityScore(search, s));
-        return searchResults;
-    }
+    writer.Flush();
+    writer.Close();
 
-    private static int GetSimilarityScore(string searchText, SymbolInfo symbolInfo) {
-        return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.FullName.ToLower());
-    }
+    _snapShotNumber = 0;
+    SnapshotSymbols.ForEach(sp => sp.Value.Clear());
+  }
 
-    private void ExportSnapShot(MouseEventArgs args) {
-        // write snapshot to csv file
-        if (SnapshotSymbols.Count == 0) return;
-        var fileName = Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-          $"Snapshot_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-        using var writer = new StreamWriter(fileName);
-        // write header
-        writer.WriteLine(string.Join(",", SnapshotSymbols.Select(s => s.SymbolInfo.FullName)));
-        // write data
-        for (var i = 0; i < _snapShotNumber; i++) {
-            var row = SnapshotSymbols
-              .Select(s => s.Value.Count > i ? s.Value[i].ToString("F2") : "N/A");
-            writer.WriteLine(string.Join(",", row));
-        }
+  public class SnapshotSymbol
+  {
+    public required SymbolInfo SymbolInfo { get; set; }
+    public List<double> Value { get; set; } = [];
+  }
 
-        writer.Flush();
-        writer.Close();
-
-        _snapShotNumber = 0;
-        SnapshotSymbols.ForEach(sp => sp.Value.Clear());
-    }
-
-    public class SnapshotSymbol {
-        public required SymbolInfo SymbolInfo { get; set; }
-        public List<double> Value { get; set; } = [];
-    }
 }

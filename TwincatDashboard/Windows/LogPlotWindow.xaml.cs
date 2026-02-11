@@ -1,22 +1,22 @@
 ﻿using System.Windows;
 using System.Windows.Input;
-
 using ScottPlot;
+using ScottPlot.Palettes;
 using ScottPlot.Plottables;
-
 using Timer = System.Timers.Timer;
 
 namespace TwincatDashboard.Windows;
 
-public partial class LogPlotWindow : Window, IDisposable {
-    private string LogName { get; set; }
+public partial class LogPlotWindow : Window, IDisposable
+{
     private readonly DataStreamer _dataStreamer;
     private readonly Timer _updatePlotTimer = new() { Interval = 50, Enabled = true, AutoReset = true };
-
-    private Signal? _fullDataSignal;
     private Crosshair? _fullDataCrosshair;
 
-    public LogPlotWindow(string title, int logNum) {
+    private Signal? _fullDataSignal;
+
+    public LogPlotWindow(string title, int logNum)
+    {
         InitializeComponent();
 
         LogName = title;
@@ -29,16 +29,23 @@ public partial class LogPlotWindow : Window, IDisposable {
         _dataStreamer.ViewScrollLeft();
 
         // setup a timer to request a render periodically
-        _updatePlotTimer.Elapsed += (s, e) => {
-            if (_dataStreamer.HasNewData) {
-                LogPlot.Refresh();
-            }
+        _updatePlotTimer.Elapsed += (s, e) =>
+        {
+            if (_dataStreamer.HasNewData) LogPlot.Refresh();
 
             LogPlot.Plot.Axes.AutoScale();
         };
     }
 
-    public void UpdatePlot(double newData) {
+    private string LogName { get; }
+
+    public void Dispose()
+    {
+        _updatePlotTimer.Dispose();
+    }
+
+    public void UpdatePlot(double newData)
+    {
         // note: could be optimized by adding multiple points at once
         _dataStreamer.Add(newData);
         // slide marker to the left
@@ -54,30 +61,32 @@ public partial class LogPlotWindow : Window, IDisposable {
     }
 
     /// <summary>
-    /// manage plot window position by plot id
+    ///     manage plot window position by plot id
     /// </summary>
     /// <param name="windowId">the id of plot window in the plot dict</param>
-    public void SetPlotViewWindowPosById(int windowId) {
+    public void SetPlotViewWindowPosById(int windowId)
+    {
         var screenWidth = SystemParameters.PrimaryScreenWidth;
         var screenHeight = SystemParameters.PrimaryScreenHeight;
         var windowRowSize = (int)(screenHeight / Height);
-        var left = (int)(windowId / windowRowSize) * (int)Width;
-        var top = (int)(windowId % windowRowSize) * (int)Height;
+        var left = windowId / windowRowSize * (int)Width;
+        var top = windowId % windowRowSize * (int)Height;
         Left = left;
         Top = top;
     }
 
     /// <summary>
-    /// clear current plot and show new data with SignalConst Type for better performance  
+    ///     clear current plot and show new data with SignalConst Type for better performance
     /// </summary>
     /// <param name="ys"></param>
     /// <param name="sampleTime">sample time, unit ms</param>
-    public void ShowAllData(double[] ys, int sampleTime = 1) {
+    public void ShowAllData(double[] ys, int sampleTime = 1)
+    {
         _updatePlotTimer.Stop();
         // LogPlot.Plot.Clear();
         LogPlot.Reset();
         //LogPlot.Plot.Axes.ContinuouslyAutoscale = false;
-        LogPlot.Plot.Add.Palette = new ScottPlot.Palettes.Nord();
+        LogPlot.Plot.Add.Palette = new Nord();
         _fullDataSignal = LogPlot.Plot.Add.SignalConst(ys, sampleTime);
 
         _fullDataCrosshair = LogPlot.Plot.Add.Crosshair(0, 0);
@@ -91,7 +100,8 @@ public partial class LogPlotWindow : Window, IDisposable {
         LogPlot.Refresh();
 
         // wpf mouse move event, different from avalonia (PointerMoved)
-        LogPlot.MouseMove += (s, e) => {
+        LogPlot.MouseMove += (s, e) =>
+        {
             var currentPosition = e.GetPosition(LogPlot);
             // determine where the mouse is and get the nearest point
             Pixel mousePixel = new(currentPosition.X * LogPlot.DisplayScale, currentPosition.Y * LogPlot.DisplayScale);
@@ -99,7 +109,8 @@ public partial class LogPlotWindow : Window, IDisposable {
             var nearest = _fullDataSignal.GetNearest(mouseLocation,
                 LogPlot.Plot.LastRender);
 
-            switch (nearest.IsReal) {
+            switch (nearest.IsReal)
+            {
                 // place the crosshair over the highlighted point
                 case true:
                     _fullDataCrosshair.IsVisible = true;
@@ -117,9 +128,8 @@ public partial class LogPlotWindow : Window, IDisposable {
         };
     }
 
-    public void Dispose() => _updatePlotTimer.Dispose();
-
-    private void Window_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) {
+    private void Window_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
         var window = (Window)sender;
         window.Topmost = true;
     }

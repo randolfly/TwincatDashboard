@@ -5,14 +5,16 @@ using System.Text;
 
 namespace TwincatDashboard.Utils;
 
-public static class MatlabWriter {
-    public static void WriteMatFileHeader(Stream stream) {
+public static class MatlabWriter
+{
+    public static void WriteMatFileHeader(Stream stream)
+    {
         // Write MAT-file header (128 bytes)
         var header = new byte[128];
         // 1. Description (max 116 bytes)
         var description = Encoding.ASCII.GetBytes(
             "MATLAB 5.0 MAT-file, Platform: .NET, Created on: "
-                + DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss")
+            + DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss")
         );
         Array.Copy(description, header, Math.Min(description.Length, 116));
         // 2. Subsystem data offset (8 bytes, usually zero)
@@ -25,7 +27,7 @@ public static class MatlabWriter {
     }
 
     /// <summary>
-    /// Write a 1D Array to the MAT-file stream.
+    ///     Write a 1D Array to the MAT-file stream.
     /// </summary>
     /// <param name="stream"></param>
     /// <param name="name"></param>
@@ -36,9 +38,10 @@ public static class MatlabWriter {
         string name,
         ReadOnlySpan<double> data,
         int rows
-    ) {
+    )
+    {
         // --- Begin Data Element ---
-        int totalBytes = CalMatrixBytes(name, rows, 1);
+        var totalBytes = CalMatrixBytes(name, rows, 1);
         Span<byte> tag = stackalloc byte[8];
         BinaryPrimitives.WriteInt32LittleEndian(tag[..4], 14); // miMATRIX = 14
         BinaryPrimitives.WriteInt32LittleEndian(tag[4..8], totalBytes);
@@ -68,14 +71,14 @@ public static class MatlabWriter {
 
         // Name
         var nameBytes = Encoding.ASCII.GetBytes(name);
-        int nameLen = nameBytes.Length;
+        var nameLen = nameBytes.Length;
         Span<byte> nameTag = stackalloc byte[8];
         BinaryPrimitives.WriteInt32LittleEndian(nameTag[..4], 1); // miINT8
         BinaryPrimitives.WriteInt32LittleEndian(nameTag[4..8], nameLen);
         stream.Write(nameTag);
         stream.Write(nameBytes, 0, nameLen);
         if (nameLen % 8 != 0)
-            stream.Write(new byte[8 - (nameLen % 8)], 0, 8 - (nameLen % 8)); // padding
+            stream.Write(new byte[8 - nameLen % 8], 0, 8 - nameLen % 8); // padding
 
         // Data
         Span<byte> dataTag = stackalloc byte[8];
@@ -88,15 +91,16 @@ public static class MatlabWriter {
         stream.Write(doubleSpan);
     }
 
-    private static int CalMatrixBytes(string name, int rows, int cols) {
-        int nameLen = name.Length;
-        int dataLen = rows * cols * 8;
+    private static int CalMatrixBytes(string name, int rows, int cols)
+    {
+        var nameLen = name.Length;
+        var dataLen = rows * cols * 8;
         // 1. Array Flags tag+data (8+8)
         // 2. Dimensions tag+data (8+8)
         // 3. Name tag+data (8+len+pad)
         // 4. Data tag+data (8+len), pad=0 since double is 8 bytes
-        int namePad = (nameLen % 8 == 0) ? 0 : (8 - (nameLen % 8));
-        int total = (8 + 8) + (8 + 8) + (8 + nameLen + namePad) + (8 + dataLen);
+        var namePad = nameLen % 8 == 0 ? 0 : 8 - nameLen % 8;
+        var total = 8 + 8 + 8 + 8 + 8 + nameLen + namePad + 8 + dataLen;
         return total;
     }
 }

@@ -9,6 +9,9 @@ public class LogPlotService {
     var logPlotWindow = new LogPlotWindow(channelName, plotBufferCapacity);
     logPlotWindow.SetPlotViewWindowPosById(PlotDict.Count);
     PlotDict.Add(channelName, logPlotWindow);
+
+    logPlotWindow.Closed += (_, _) => PlotDict.Remove(channelName);
+
     logPlotWindow.Show();
   }
 

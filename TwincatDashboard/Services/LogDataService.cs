@@ -1,6 +1,7 @@
 ﻿using Serilog;
 
 using System.Buffers;
+using System.Buffers.Text;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -69,21 +70,86 @@ public class LogDataService {
       int dataLength
   ) {
     if (exportTypes.Contains("csv")) {
-      var fileStream = new FileStream(
+      await using var fileStream = new FileStream(
           fileName + ".csv",
           FileMode.Create,
           FileAccess.Write,
-          FileShare.None
+          FileShare.None,
+          64 * 1024,
+          true
       );
-      await using var writer = new StreamWriter(fileStream, Encoding.UTF8);
-      // Write header
-      await writer.WriteLineAsync(string.Join(',', dataSrc.Keys));
-      var rowCount = dataLength;
-      for (var i = 0; i < rowCount; i++) {
-        var row = new List<string>();
-        foreach (var channel in dataSrc)
-          row.Add(channel.Value.ElementAt(i).ToString(CultureInfo.InvariantCulture));
-        await writer.WriteLineAsync(string.Join(',', row));
+
+      var valueBuffer = ArrayPool<byte>.Shared.Rent(256);
+      var rowBuffer = ArrayPool<byte>.Shared.Rent(4096);
+
+      try {
+        await WriteHeaderAsync();
+
+        var rowCount = dataLength;
+        for (var i = 0; i < rowCount; i++) {
+          var rowLength = 0;
+          var colIndex = 0;
+
+          foreach (var channel in dataSrc) {
+            if (colIndex > 0)
+              AppendByte(ref rowLength, (byte)',');
+
+            if (Utf8Formatter.TryFormat(channel.Value[i], valueBuffer, out var bytesWritten, new StandardFormat('G', 17)))
+              AppendBytes(ref rowLength, valueBuffer.AsSpan(0, bytesWritten));
+
+            colIndex++;
+          }
+
+          AppendByte(ref rowLength, (byte)'\n');
+          await fileStream.WriteAsync(rowBuffer.AsMemory(0, rowLength));
+        }
+      } finally {
+        ArrayPool<byte>.Shared.Return(valueBuffer);
+        ArrayPool<byte>.Shared.Return(rowBuffer);
+      }
+
+      async Task WriteHeaderAsync() {
+        var rowLength = 0;
+        var colIndex = 0;
+
+        foreach (var key in dataSrc.Keys) {
+          if (colIndex > 0)
+            AppendByte(ref rowLength, (byte)',');
+
+          AppendUtf8String(ref rowLength, key);
+          colIndex++;
+        }
+
+        AppendByte(ref rowLength, (byte)'\n');
+        await fileStream.WriteAsync(rowBuffer.AsMemory(0, rowLength));
+      }
+
+      void AppendByte(ref int length, byte value) {
+        EnsureRowCapacity(length + 1, length);
+        rowBuffer[length++] = value;
+      }
+
+      void AppendBytes(ref int length, ReadOnlySpan<byte> bytes) {
+        EnsureRowCapacity(length + bytes.Length, length);
+        bytes.CopyTo(rowBuffer.AsSpan(length));
+        length += bytes.Length;
+      }
+
+      void AppendUtf8String(ref int length, string text) {
+        var byteCount = Encoding.UTF8.GetByteCount(text);
+        EnsureRowCapacity(length + byteCount, length);
+        length += Encoding.UTF8.GetBytes(text, rowBuffer.AsSpan(length));
+      }
+
+      void EnsureRowCapacity(int required, int currentLength) {
+        if (required <= rowBuffer.Length)
+          return;
+
+        var newSize = Math.Max(required, rowBuffer.Length * 2);
+        var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+        rowBuffer.AsSpan(0, currentLength).CopyTo(newBuffer);
+        ArrayPool<byte>.Shared.Return(rowBuffer);
+        rowBuffer = newBuffer;
       }
     }
 
@@ -125,6 +191,8 @@ public class LogDataService {
           .Replace("]", "_");
     }
   }
+
+
 
   public void DeleteTmpFiles() {
     QuickLogDict.Values.ToList().ForEach(channel => channel.DeleteTmpFile());
@@ -169,19 +237,27 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
   }
 
   private static async Task SaveToFileAsync(ArraySegment<double> array, string filePath) {
-    var stringBuilder = new StringBuilder();
-    foreach (var value in array) stringBuilder.AppendLine(value.ToString(CultureInfo.InvariantCulture));
-
     await using var fileStream = new FileStream(
         filePath,
         FileMode.Append,
         FileAccess.Write,
         FileShare.None,
-        4096,
+        64 * 1024,
         true
     );
-    await using var writer = new StreamWriter(fileStream);
-    await writer.WriteAsync(stringBuilder.ToString());
+
+    var buffer = ArrayPool<byte>.Shared.Rent(256);
+    try {
+      foreach (var value in array) {
+        if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
+          continue;
+
+        buffer[bytesWritten++] = (byte)'\n';
+        await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
+      }
+    } finally {
+      ArrayPool<byte>.Shared.Return(buffer);
+    }
   }
 
   public async Task LoadFromFileByArrayPoolAsync() {
@@ -192,37 +268,58 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
     }
 
     LogData = ArrayPool.Rent(DataLength);
-    // use a stream to read file by lines
 
     await using var fileStream = new FileStream(
         FilePath,
         FileMode.Open,
         FileAccess.Read,
         FileShare.Read,
-        4096,
+        64 * 1024,
         true
     );
 
-    using var reader = new StreamReader(fileStream);
+    var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+    byte[] lineBuffer = ArrayPool<byte>.Shared.Rent(256);
+    var lineLength = 0;
     var index = 0;
-    while (await reader.ReadLineAsync() is { } line) {
-      if (double.TryParse(line, out var value)) {
-        if (index >= LogData.Length)
-          break;
-        LogData[index] = value;
-      } else {
-        Log.Warning("Failed to parse line: {Line} of {File}", line, FilePath);
-        LogData[index] = 0;
+    var stop = false;
+
+    try {
+      int bytesRead;
+      while (!stop && (bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
+        var span = buffer.AsSpan(0, bytesRead);
+        var start = 0;
+
+        while (start < span.Length && !stop) {
+          var newlineIndex = span.Slice(start).IndexOf((byte)'\n');
+          if (newlineIndex < 0) {
+            AppendToLineBuffer(span.Slice(start));
+            break;
+          }
+
+          var chunk = span.Slice(start, newlineIndex);
+          AppendToLineBuffer(chunk);
+          ProcessLine();
+          start += newlineIndex + 1;
+        }
       }
 
-      index++;
+      if (!stop && lineLength > 0)
+        ProcessLine();
+    } finally {
+      ArrayPool<byte>.Shared.Return(buffer);
+      ArrayPool<byte>.Shared.Return(lineBuffer);
     }
 
     // update DataLength if actual data length is less than expected(file IO latency may cause this)
     if (index <= DataLength)
       DataLength = index;
-    for (var i = DataLength; i < LogData.Length; i++)
-      LogData[i] = LogData[DataLength - 1]; // fill the rest with last value
+
+    if (DataLength > 0) {
+      for (var i = DataLength; i < LogData.Length; i++)
+        LogData[i] = LogData[DataLength - 1]; // fill the rest with last value
+    }
+
     Log.Information(
         "{File} ideal data length: {DataLength}, actual data length: {ActualLength}",
         FilePath,
@@ -231,6 +328,48 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
     );
 
     Log.Information("Retrieve all data from file {FilePath}", FilePath);
+
+    void AppendToLineBuffer(ReadOnlySpan<byte> chunk) {
+      EnsureLineBufferCapacity(lineLength + chunk.Length);
+      chunk.CopyTo(lineBuffer.AsSpan(lineLength));
+      lineLength += chunk.Length;
+    }
+
+    void EnsureLineBufferCapacity(int required) {
+      if (required <= lineBuffer.Length)
+        return;
+
+      var newSize = Math.Max(required, lineBuffer.Length * 2);
+      var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+      lineBuffer.AsSpan(0, lineLength).CopyTo(newBuffer);
+      ArrayPool<byte>.Shared.Return(lineBuffer);
+      lineBuffer = newBuffer;
+    }
+
+    void ProcessLine() {
+      if (index >= LogData.Length) {
+        stop = true;
+        return;
+      }
+
+      var lineSpan = lineBuffer.AsSpan(0, lineLength);
+      if (lineSpan.Length > 0 && lineSpan[^1] == (byte)'\r')
+        lineSpan = lineSpan[..^1];
+
+      if (Utf8Parser.TryParse(lineSpan, out double value, out var consumed) && consumed == lineSpan.Length) {
+        LogData[index] = value;
+      } else {
+        Log.Warning(
+            "Failed to parse line: {Line} of {File}",
+            Encoding.UTF8.GetString(lineSpan),
+            FilePath
+        );
+        LogData[index] = 0;
+      }
+
+      index++;
+      lineLength = 0;
+    }
   }
 
   public void ReturnArrayToPool() {

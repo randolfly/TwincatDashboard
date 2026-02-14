@@ -1,6 +1,7 @@
 ﻿using Serilog;
 
 using System.Buffers;
+using System.Runtime.CompilerServices;
 
 namespace TwincatDashboard.Utils;
 
@@ -11,7 +12,8 @@ namespace TwincatDashboard.Utils;
 ///     Buffer capacity. Must be positive.
 /// </param>
 public class CircularBuffer<T>(int capacity) : IDisposable where T : struct {
-  private readonly T[] _buffer = ArrayPool.Rent(capacity);
+  private T[] _buffer = ArrayPool.Rent(capacity);
+  private bool _returned;
 
   /// <summary>
   ///     The _end. Index after the last element in the buffer.
@@ -28,7 +30,7 @@ public class CircularBuffer<T>(int capacity) : IDisposable where T : struct {
   public int Capacity => _buffer.Length;
   public bool IsFull => Size == Capacity;
   public bool IsEmpty => Size == 0;
-  public int Size => _end >= _start ? _end - _start : Capacity - _end - _start;
+  public int Size => _end >= _start ? _end - _start : Capacity - _start + _end;
 
   public void Dispose() {
     ReturnBufferToArrayPool();
@@ -60,9 +62,14 @@ public class CircularBuffer<T>(int capacity) : IDisposable where T : struct {
   }
 
   public void ReturnBufferToArrayPool() {
-    if (_buffer != null) {
-      Log.Information("Return CircularBuffer of size: {Size}", Capacity);
-      ArrayPool.Return(_buffer);
-    }
+    if (_returned || _buffer.Length == 0)
+      return;
+
+    Log.Information("Return CircularBuffer of size: {Size}", Capacity);
+    ArrayPool.Return(_buffer, RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+    _buffer = Array.Empty<T>();
+    _start = 0;
+    _end = 0;
+    _returned = true;
   }
 }

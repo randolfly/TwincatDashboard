@@ -428,6 +428,8 @@
     ExportLogConfig();
 
     _symbolsDict.Clear();
+
+    // TODO: 修改删除数据逻辑——RemoveAllChannel应该调用Dispose方法，将其挪到StopLog后调用
     LogDataService.RemoveAllChannels();
     LogPlotService.RemoveAllChannels();
     // slow log symbols: register slow log data

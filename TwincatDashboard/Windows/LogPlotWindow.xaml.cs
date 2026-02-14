@@ -1,136 +1,135 @@
-﻿using System.Windows;
-using System.Windows.Input;
-using ScottPlot;
+﻿using ScottPlot;
 using ScottPlot.Palettes;
 using ScottPlot.Plottables;
+
+using Serilog;
+
+using System.Windows;
+using System.Windows.Input;
+
 using Timer = System.Timers.Timer;
 
 namespace TwincatDashboard.Windows;
 
-public partial class LogPlotWindow : Window, IDisposable
-{
-    private readonly DataStreamer _dataStreamer;
-    private readonly Timer _updatePlotTimer = new() { Interval = 50, Enabled = true, AutoReset = true };
-    private Crosshair? _fullDataCrosshair;
+public partial class LogPlotWindow : Window {
+  private readonly DataStreamer _dataStreamer;
+  private readonly Timer _updatePlotTimer = new() { Interval = 50, Enabled = true, AutoReset = true };
+  private Crosshair? _fullDataCrosshair;
 
-    private Signal? _fullDataSignal;
+  private Signal? _fullDataSignal;
 
-    public LogPlotWindow(string title, int logNum)
-    {
-        InitializeComponent();
+  public LogPlotWindow(string title, int logNum) {
+    InitializeComponent();
 
-        LogName = title;
-        Title = LogName;
-        // will cause const data flow not render!
-        //LogPlot.Plot.Axes.ContinuouslyAutoscale = true;
-        LogPlot.Plot.ScaleFactor = 1.0;
+    LogName = title;
+    Title = LogName;
+    // will cause const data flow not render!
+    //LogPlot.Plot.Axes.ContinuouslyAutoscale = true;
+    LogPlot.Plot.ScaleFactor = 1.0;
 
-        _dataStreamer = LogPlot.Plot.Add.DataStreamer(logNum);
-        _dataStreamer.ViewScrollLeft();
+    _dataStreamer = LogPlot.Plot.Add.DataStreamer(logNum);
+    _dataStreamer.ViewScrollLeft();
 
-        // setup a timer to request a render periodically
-        _updatePlotTimer.Elapsed += (s, e) =>
-        {
-            if (_dataStreamer.HasNewData) LogPlot.Refresh();
+    // setup a timer to request a render periodically
+    _updatePlotTimer.Elapsed += (s, e) => {
+      if (_dataStreamer.HasNewData) LogPlot.Refresh();
 
-            LogPlot.Plot.Axes.AutoScale();
-        };
-    }
+      LogPlot.Plot.Axes.AutoScale();
+    };
 
-    private string LogName { get; }
+    // 订阅 Closed 事件
+    this.Closed += OnWindowClosed;
+  }
 
-    public void Dispose()
-    {
-        _updatePlotTimer.Dispose();
-    }
+  private string LogName { get; }
 
-    public void UpdatePlot(double newData)
-    {
-        // note: could be optimized by adding multiple points at once
-        _dataStreamer.Add(newData);
-        // slide marker to the left
-        LogPlot.Plot.GetPlottables<Marker>()
-            .ToList()
-            .ForEach(m => m.X -= 1);
+  private void OnWindowClosed(object? sender, EventArgs e) {
+    Log.Information("Disposing LogPlotWindow: {LogName}", LogName);
+    _updatePlotTimer.Dispose();
+  }
 
-        // remove off-screen marks
-        LogPlot.Plot.GetPlottables<Marker>()
-            .Where(m => m.X < 0)
-            .ToList()
-            .ForEach(m => LogPlot.Plot.Remove(m));
-    }
 
-    /// <summary>
-    ///     manage plot window position by plot id
-    /// </summary>
-    /// <param name="windowId">the id of plot window in the plot dict</param>
-    public void SetPlotViewWindowPosById(int windowId)
-    {
-        var screenWidth = SystemParameters.PrimaryScreenWidth;
-        var screenHeight = SystemParameters.PrimaryScreenHeight;
-        var windowRowSize = (int)(screenHeight / Height);
-        var left = windowId / windowRowSize * (int)Width;
-        var top = windowId % windowRowSize * (int)Height;
-        Left = left;
-        Top = top;
-    }
+  public void UpdatePlot(double newData) {
+    // note: could be optimized by adding multiple points at once
+    _dataStreamer.Add(newData);
+    // slide marker to the left
+    LogPlot.Plot.GetPlottables<Marker>()
+        .ToList()
+        .ForEach(m => m.X -= 1);
 
-    /// <summary>
-    ///     clear current plot and show new data with SignalConst Type for better performance
-    /// </summary>
-    /// <param name="ys"></param>
-    /// <param name="sampleTime">sample time, unit ms</param>
-    public void ShowAllData(double[] ys, int sampleTime = 1)
-    {
-        _updatePlotTimer.Stop();
-        // LogPlot.Plot.Clear();
-        LogPlot.Reset();
-        //LogPlot.Plot.Axes.ContinuouslyAutoscale = false;
-        LogPlot.Plot.Add.Palette = new Nord();
-        _fullDataSignal = LogPlot.Plot.Add.SignalConst(ys, sampleTime);
+    // remove off-screen marks
+    LogPlot.Plot.GetPlottables<Marker>()
+        .Where(m => m.X < 0)
+        .ToList()
+        .ForEach(m => LogPlot.Plot.Remove(m));
+  }
 
-        _fullDataCrosshair = LogPlot.Plot.Add.Crosshair(0, 0);
-        _fullDataCrosshair.IsVisible = false;
-        _fullDataCrosshair.MarkerShape = MarkerShape.OpenCircle;
-        _fullDataCrosshair.MarkerSize = 5;
+  /// <summary>
+  ///     manage plot window position by plot id
+  /// </summary>
+  /// <param name="windowId">the id of plot window in the plot dict</param>
+  public void SetPlotViewWindowPosById(int windowId) {
+    var screenWidth = SystemParameters.PrimaryScreenWidth;
+    var screenHeight = SystemParameters.PrimaryScreenHeight;
+    var windowRowSize = (int)(screenHeight / Height);
+    var left = windowId / windowRowSize * (int)Width;
+    var top = windowId % windowRowSize * (int)Height;
+    Left = left;
+    Top = top;
+  }
 
-        //LogPlot.Plot.XLabel("Time(ms)");
-        //CustomPlotInteraction();
-        LogPlot.Plot.Axes.AutoScale();
-        LogPlot.Refresh();
+  /// <summary>
+  ///     clear current plot and show new data with SignalConst Type for better performance
+  /// </summary>
+  /// <param name="ys"></param>
+  /// <param name="sampleTime">sample time, unit ms</param>
+  public void ShowAllData(double[] ys, int sampleTime = 1) {
+    _updatePlotTimer.Stop();
+    // LogPlot.Plot.Clear();
+    LogPlot.Reset();
+    //LogPlot.Plot.Axes.ContinuouslyAutoscale = false;
+    LogPlot.Plot.Add.Palette = new Nord();
+    _fullDataSignal = LogPlot.Plot.Add.SignalConst(ys, sampleTime);
 
-        // wpf mouse move event, different from avalonia (PointerMoved)
-        LogPlot.MouseMove += (s, e) =>
-        {
-            var currentPosition = e.GetPosition(LogPlot);
-            // determine where the mouse is and get the nearest point
-            Pixel mousePixel = new(currentPosition.X * LogPlot.DisplayScale, currentPosition.Y * LogPlot.DisplayScale);
-            var mouseLocation = LogPlot.Plot.GetCoordinates(mousePixel);
-            var nearest = _fullDataSignal.GetNearest(mouseLocation,
-                LogPlot.Plot.LastRender);
+    _fullDataCrosshair = LogPlot.Plot.Add.Crosshair(0, 0);
+    _fullDataCrosshair.IsVisible = false;
+    _fullDataCrosshair.MarkerShape = MarkerShape.OpenCircle;
+    _fullDataCrosshair.MarkerSize = 5;
 
-            switch (nearest.IsReal)
-            {
-                // place the crosshair over the highlighted point
-                case true:
-                    _fullDataCrosshair.IsVisible = true;
-                    _fullDataCrosshair.Position = nearest.Coordinates;
-                    LogPlot.Refresh();
-                    Title = $"{LogName}: X={nearest.X:0.##}, Y={nearest.Y:0.##}";
-                    break;
-                // hide the crosshair when no point is selected
-                case false when _fullDataCrosshair.IsVisible:
-                    _fullDataCrosshair.IsVisible = false;
-                    LogPlot.Refresh();
-                    Title = $"{LogName}";
-                    break;
-            }
-        };
-    }
+    //LogPlot.Plot.XLabel("Time(ms)");
+    //CustomPlotInteraction();
+    LogPlot.Plot.Axes.AutoScale();
+    LogPlot.Refresh();
 
-    private void Window_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-    {
-        var window = (Window)sender;
-        window.Topmost = true;
-    }
+    // wpf mouse move event, different from avalonia (PointerMoved)
+    LogPlot.MouseMove += (s, e) => {
+      var currentPosition = e.GetPosition(LogPlot);
+      // determine where the mouse is and get the nearest point
+      Pixel mousePixel = new(currentPosition.X * LogPlot.DisplayScale, currentPosition.Y * LogPlot.DisplayScale);
+      var mouseLocation = LogPlot.Plot.GetCoordinates(mousePixel);
+      var nearest = _fullDataSignal.GetNearest(mouseLocation,
+          LogPlot.Plot.LastRender);
+
+      switch (nearest.IsReal) {
+        // place the crosshair over the highlighted point
+        case true:
+          _fullDataCrosshair.IsVisible = true;
+          _fullDataCrosshair.Position = nearest.Coordinates;
+          LogPlot.Refresh();
+          Title = $"{LogName}: X={nearest.X:0.##}, Y={nearest.Y:0.##}";
+          break;
+        // hide the crosshair when no point is selected
+        case false when _fullDataCrosshair.IsVisible:
+          _fullDataCrosshair.IsVisible = false;
+          LogPlot.Refresh();
+          Title = $"{LogName}";
+          break;
+      }
+    };
+  }
+
+  private void Window_PreviewLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) {
+    var window = (Window)sender;
+    window.Topmost = true;
+  }
 }

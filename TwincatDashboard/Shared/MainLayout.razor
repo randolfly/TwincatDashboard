@@ -4,217 +4,207 @@
 @inherits LayoutComponentBase
 
 <MApp>
-  <MNavigationDrawer App Permanent>
-    <ChildContent>
-      <MCard Flat>
-        <MCardTitle>
-          TwinCAT Dashboard
-        </MCardTitle>
-        <div style="margin: 10px;">
-          <MRow Align="AlignTypes.Center" Justify="JustifyTypes.Start">
-            <MCol Cols="12">
-              <MTextField Outlined Dense
-                          Label="NetId"
-                          HideDetails="@("auto")"
-                          @bind-Value="NetId"/>
-            </MCol>
-            <MCol Cols="12">
-              <MTextField Outlined Dense
-                          HideDetails="@("auto")"
-                          Type="number"
-                          Label="PortId"
-                          @bind-Value="PortId"/>
-            </MCol>
-            <MCol Cols="3">
-              <MTooltip Bottom>
-                <ActivatorContent>
-                  <MButton @attributes="@context.Attrs" Color="primary" Icon
-                           OnClick="ConnectAdsServerAsync">
-                    <MIcon>mdi-connection</MIcon>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <span>connect to ads server</span>
-                </ChildContent>
-              </MTooltip>
-            </MCol>
-            <MCol Cols="3">
-              <MTooltip Bottom>
-                <ActivatorContent>
-                  <MButton @attributes="@context.Attrs" Color="primary" Icon
-                           OnClick="DisConnectAdsServerAsync">
-                    <MIcon>mdi-delete</MIcon>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <span>disconnect to ads server</span>
-                </ChildContent>
-              </MTooltip>
-            </MCol>
-            <MCol Cols="3">
-              <MTooltip Bottom>
-                <ActivatorContent>
-                  <MButton @attributes="@context.Attrs" Color="primary" Icon OnClick="CheckAdsState">
-                    <MIcon>mdi-check</MIcon>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <span>check ads server state</span>
-                </ChildContent>
-              </MTooltip>
-            </MCol>
-            <MCol Cols="3">
-              <MDialog MaxWidth="500">
-                <ActivatorContent Context="dialogCtx">
-                  <MButton @attributes="dialogCtx.Attrs" Color="primary" Icon>
-                    <MTooltip Bottom>
-                      <ActivatorContent Context="tooltipCtx">
-                        <MIcon @attributes="tooltipCtx.Attrs">mdi-broadcast</MIcon>
-                      </ActivatorContent>
-                      <ChildContent>
-                        <span>show ads route table</span>
-                      </ChildContent>
-                    </MTooltip>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <MCard Style="padding: 4px;">
-                    <MCardText>
-                      <div class="text-h6">AdsRoute Tables</div>
-                    </MCardText>
-                    <MDivider/>
-                    <AdsRouteTable AdsRouteInfo="AdsRouteInfos"
-                                   SelectedAdsRoute="HandleAdsRouteChange"/>
-                  </MCard>
-                </ChildContent>
-              </MDialog>
-            </MCol>
-          </MRow>
-        </div>
-        <MDivider/>
-      </MCard>
-      <MList Nav Dense Routable>
-        @foreach (var item in _navItems)
-        {
-          <MListItem Href="@item.Href" ActiveClass="primary--text">
-            <MListItemIcon>
-              <MIcon>@item.Icon</MIcon>
-            </MListItemIcon>
-            <MListItemContent>
-              <MListItemTitle>@item.Name</MListItemTitle>
-            </MListItemContent>
-          </MListItem>
-        }
-      </MList>
-      <MDivider/>
-    </ChildContent>
+	<MNavigationDrawer App Permanent>
+		<ChildContent>
+			<MCard Flat>
+				<MCardTitle>
+					TwinCAT Dashboard
+				</MCardTitle>
+				<div style="margin: 10px;">
+					<MRow Align="AlignTypes.Center" Justify="JustifyTypes.Start">
+						<MCol Cols="12">
+							<MTextField Outlined Dense
+													Label="NetId"
+													HideDetails="@("auto")"
+													@bind-Value="NetId" />
+						</MCol>
+						<MCol Cols="12">
+							<MTextField Outlined Dense
+													HideDetails="@("auto")"
+													Type="number"
+													Label="PortId"
+													@bind-Value="PortId" />
+						</MCol>
+						<MCol Cols="3">
+							<MTooltip Bottom>
+								<ActivatorContent>
+									<MButton @attributes="@context.Attrs" Color="primary" Icon
+													 OnClick="ConnectAdsServerAsync">
+										<MIcon>mdi-connection</MIcon>
+									</MButton>
+								</ActivatorContent>
+								<ChildContent>
+									<span>connect to ads server</span>
+								</ChildContent>
+							</MTooltip>
+						</MCol>
+						<MCol Cols="3">
+							<MTooltip Bottom>
+								<ActivatorContent>
+									<MButton @attributes="@context.Attrs" Color="primary" Icon
+													 OnClick="DisConnectAdsServerAsync">
+										<MIcon>mdi-delete</MIcon>
+									</MButton>
+								</ActivatorContent>
+								<ChildContent>
+									<span>disconnect to ads server</span>
+								</ChildContent>
+							</MTooltip>
+						</MCol>
+						<MCol Cols="3">
+							<MTooltip Bottom>
+								<ActivatorContent>
+									<MButton @attributes="@context.Attrs" Color="primary" Icon OnClick="CheckAdsState">
+										<MIcon>mdi-check</MIcon>
+									</MButton>
+								</ActivatorContent>
+								<ChildContent>
+									<span>check ads server state</span>
+								</ChildContent>
+							</MTooltip>
+						</MCol>
+						<MCol Cols="3">
+							<MDialog MaxWidth="500">
+								<ActivatorContent Context="dialogCtx">
+									<MButton @attributes="dialogCtx.Attrs" Color="primary" Icon>
+										<MTooltip Bottom>
+											<ActivatorContent Context="tooltipCtx">
+												<MIcon @attributes="tooltipCtx.Attrs">mdi-broadcast</MIcon>
+											</ActivatorContent>
+											<ChildContent>
+												<span>show ads route table</span>
+											</ChildContent>
+										</MTooltip>
+									</MButton>
+								</ActivatorContent>
+								<ChildContent>
+									<MCard Style="padding: 4px;">
+										<MCardText>
+											<div class="text-h6">AdsRoute Tables</div>
+										</MCardText>
+										<MDivider />
+										<AdsRouteTable AdsRouteInfo="AdsRouteInfos"
+																	 SelectedAdsRoute="HandleAdsRouteChange" />
+									</MCard>
+								</ChildContent>
+							</MDialog>
+						</MCol>
+					</MRow>
+				</div>
+				<MDivider />
+			</MCard>
+			<MList Nav Dense Routable>
+				@foreach (var item in _navItems) {
+					<MListItem Href="@item.Href" ActiveClass="primary--text">
+						<MListItemIcon>
+							<MIcon>@item.Icon</MIcon>
+						</MListItemIcon>
+						<MListItemContent>
+							<MListItemTitle>@item.Name</MListItemTitle>
+						</MListItemContent>
+					</MListItem>
+				}
+			</MList>
+			<MDivider />
+		</ChildContent>
 
-    <AppendContent>
-      <MBorder Color="@AdsStateColor">
-        <MCard Outlined>
-          <MCardTitle>AdsState</MCardTitle>
-          <MCardSubtitle>@AdsStateText</MCardSubtitle>
-        </MCard>
-      </MBorder>
-      <MList Nav Dense Routable>
-        <MListItem Href="/Setting" ActiveClass="primary--text">
-          <MListItemIcon>
-            <MIcon>mdi-cog</MIcon>
-          </MListItemIcon>
-          <MListItemContent>
-            <MListItemTitle>Setting</MListItemTitle>
-          </MListItemContent>
-        </MListItem>
-      </MList>
-    </AppendContent>
-  </MNavigationDrawer>
+		<AppendContent>
+			<MBorder Color="@AdsStateColor">
+				<MCard Outlined>
+					<MCardTitle>AdsState</MCardTitle>
+					<MCardSubtitle>@AdsStateText</MCardSubtitle>
+				</MCard>
+			</MBorder>
+			<MList Nav Dense Routable>
+				<MListItem Href="/Setting" ActiveClass="primary--text">
+					<MListItemIcon>
+						<MIcon>mdi-cog</MIcon>
+					</MListItemIcon>
+					<MListItemContent>
+						<MListItemTitle>Setting</MListItemTitle>
+					</MListItemContent>
+				</MListItem>
+			</MList>
+		</AppendContent>
+	</MNavigationDrawer>
 
-  <MMain Style="height: 100vh">
-    <MContainer Fluid Style="height: 100%; padding-top: 0; padding-bottom: 0;">
-      <MErrorHandler>
-        @Body
-      </MErrorHandler>
-    </MContainer>
-  </MMain>
+	<MMain Style="height: 100vh">
+		<MContainer Fluid Style="height: 100%; padding-top: 0; padding-bottom: 0;">
+			<MErrorHandler>
+				@Body
+			</MErrorHandler>
+		</MContainer>
+	</MMain>
 </MApp>
 
 @code {
 
-  private readonly List<NavItem> _navItems =
-  [
-    new() { Name = "DataLog", Icon = "mdi-home", Href = "/" },
+	private readonly List<NavItem> _navItems =
+	[
+		new() { Name = "DataLog", Icon = "mdi-home", Href = "/" },
     // new() { Name = "Dashboard", Icon = "mdi-list-box", Href = "/dashboard" },
     // new() { Name = "Experiment", Icon = "mdi-list-box", Href = "/experiment" },
     new() { Name = "SnapShot", Icon = "mdi-camera", Href = "/data-snapshot" }
-  ];
+	];
 
-  public string AdsStateText { get; set; } = "Invalid";
-  public string AdsStateColor = "#607D8B";
-  public string NetId { get; set; } = string.Empty;
-  public int PortId { get; set; } = 851;
+	public string AdsStateText { get; set; } = "Invalid";
+	public string AdsStateColor = "#607D8B";
+	public string NetId { get; set; } = string.Empty;
+	public int PortId { get; set; } = 851;
 
-  public List<AdsRouteInfo> AdsRouteInfos { get; set; } = new();
-  private AdsRouteInfo? SelectedAdsRoute { get; set; }
+	public List<AdsRouteInfo> AdsRouteInfos { get; set; } = new();
+	private AdsRouteInfo? SelectedAdsRoute { get; set; }
 
-  private readonly AdsConfig _adsConfig = AppConfigService.AppConfig.AdsConfig;
+	private readonly AdsConfig _adsConfig = AppConfigService.AppConfig.AdsConfig;
 
-  protected override void OnInitialized()
-  {
-    NetId = _adsConfig.NetId;
-    PortId = _adsConfig.PortId;
+	protected override void OnInitialized() {
+		NetId = _adsConfig.NetId;
+		PortId = _adsConfig.PortId;
 
-    AdsRouteInfos = AdsComService.ScanAdsRoutes();
-  }
+		AdsRouteInfos = AdsComService.ScanAdsRoutes();
+	}
 
-  private async Task ConnectAdsServerAsync()
-  {
-    _adsConfig.NetId = NetId;
-    _adsConfig.PortId = PortId;
-    AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
-    await AdsComService.ConnectAdsServerAsync(_adsConfig);
-    CheckAdsState();
-  }
+	private async Task ConnectAdsServerAsync() {
+		_adsConfig.NetId = NetId;
+		_adsConfig.PortId = PortId;
+		AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
+		await AdsComService.ConnectAdsServerAsync(_adsConfig);
+		CheckAdsState();
+	}
 
-  private void CheckAdsState()
-  {
-    var adsState = AdsComService.GetAdsState();
-    AdsStateText = adsState.ToString();
-    AdsStateColor = adsState switch
-    {
-      AdsState.Invalid => "#607D8B", //grey
-      AdsState.Stop => "#4CAF50", //green
-      AdsState.Run => "#2196F3", //blue
-      _ => "#F44336" //red
-    };
-    Log.Information("Ads server state: {AdsState}", AdsComService.GetAdsState());
-  }
+	private void CheckAdsState() {
+		var adsState = AdsComService.GetAdsState();
+		AdsStateText = adsState.ToString();
+		AdsStateColor = adsState switch {
+			AdsState.Invalid => "#607D8B", //grey
+			AdsState.Stop => "#4CAF50", //green
+			AdsState.Run => "#2196F3", //blue
+			_ => "#F44336" //red
+		};
+		Log.Information("Ads server state: {AdsState}", AdsComService.GetAdsState());
+	}
 
-  private async Task DisConnectAdsServerAsync()
-  {
-    await AdsComService.DisconnectAdsServerAsync();
-    CheckAdsState();
-  }
+	private async Task DisConnectAdsServerAsync() {
+		await AdsComService.DisconnectAdsServerAsync();
+		CheckAdsState();
+	}
 
-  private static void OpenConfigFolder()
-  {
-    Process.Start(new ProcessStartInfo
-    {
-      FileName = AppConfig.FolderName,
-      UseShellExecute = true
-    });
-  }
+	private static void OpenConfigFolder() {
+		Process.Start(new ProcessStartInfo {
+			FileName = AppConfig.FolderName,
+			UseShellExecute = true
+		});
+	}
 
-  private void HandleAdsRouteChange(AdsRouteInfo adsRoute)
-  {
-    SelectedAdsRoute = adsRoute;
-    NetId = SelectedAdsRoute.NetId;
-  }
+	private void HandleAdsRouteChange(AdsRouteInfo adsRoute) {
+		SelectedAdsRoute = adsRoute;
+		NetId = SelectedAdsRoute.NetId;
+	}
 
-  record NavItem
-  {
-    public required string Name { get; set; }
-    public required string Icon { get; set; }
-    public required string Href { get; set; }
-  }
+	record NavItem {
+		public required string Name { get; set; }
+		public required string Icon { get; set; }
+		public required string Href { get; set; }
+	}
 
 }

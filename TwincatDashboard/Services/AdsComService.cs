@@ -211,6 +211,7 @@ public class AdsComService : IDisposable {
     };
   }
 
+  // TODO: Use AdsNotificationEx for automatically marshalling notification data to strongly typed objects
   public void AddNotificationHandler(EventHandler<AdsNotificationEventArgs> handler) {
     _adsClient.AdsNotification += handler;
   }

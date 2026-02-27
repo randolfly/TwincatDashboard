@@ -2,8 +2,6 @@
 
 using System.Buffers;
 using System.Buffers.Text;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -201,10 +199,10 @@ public class LogDataService {
 
 public class LogDataChannel(int bufferCapacity, string channelName) : IDisposable {
   // storage tmp data for logging(default data type is double)
-  private readonly CircularBuffer<double> ChannelBuffer = new(bufferCapacity);
+  private readonly CircularBuffer<double> _channelBuffer = new(bufferCapacity);
   private string Name { get; } = channelName;
   public string? Description { get; set; }
-  public int BufferCapacity { get; set; } = bufferCapacity;
+  public int BufferCapacity { get; init; } = bufferCapacity;
   public int DataLength { get; private set; }
 
   private static string LogDataTempFolder {
@@ -222,16 +220,12 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
   private static ArrayPool<double> ArrayPool => ArrayPool<double>.Shared;
   public double[] LogData { get; private set; } = ArrayPool.Rent(0);
 
-  public void Dispose() {
-    ReturnArrayToPool();
-  }
-
   public async Task AddAsync(double data) {
-    ChannelBuffer.Add(data);
+    _channelBuffer.Add(data);
     DataLength++;
-    if (ChannelBuffer.Size * 2 >= ChannelBuffer.Capacity) {
-      Debug.WriteLine($"Buffer is half size, save to file: {FilePath}");
-      var dataSrc = ChannelBuffer.RemoveRange(ChannelBuffer.Size);
+    if (_channelBuffer.Size * 2 >= _channelBuffer.Capacity) {
+      Log.Information($"Buffer is half size, save to file: {FilePath}");
+      var dataSrc = _channelBuffer.RemoveRange(_channelBuffer.Size);
       await SaveToFileAsync(dataSrc, FilePath);
     }
   }
@@ -242,7 +236,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
         FileMode.Append,
         FileAccess.Write,
         FileShare.None,
-        64 * 1024,
+        64 * 512,
         true
     );
 
@@ -292,6 +286,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
 
         while (start < span.Length && !stop) {
           var newlineIndex = span.Slice(start).IndexOf((byte)'\n');
+          // if bytes are not aligned, the rest data are stored into lineBuffer until next read
           if (newlineIndex < 0) {
             AppendToLineBuffer(span.Slice(start));
             break;
@@ -372,20 +367,20 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
     }
   }
 
-  public void ReturnArrayToPool() {
+  public void DeleteTmpFile() {
+    if (File.Exists(FilePath)) {
+      Log.Information("Delete tmp log file: {FilePath}", FilePath);
+      File.Delete(FilePath);
+    }
+  }
+
+  public void Dispose() {
     if (LogData is not null && LogData.Length > 0) {
       Log.Information("Return {Channel} LogData of size: {Size}", Name, LogData.Length);
       ArrayPool.Return(LogData);
       LogData = [];
     }
 
-    ChannelBuffer.ReturnBufferToArrayPool();
-  }
-
-  public void DeleteTmpFile() {
-    if (File.Exists(FilePath)) {
-      Log.Information("Delete tmp log file: {FilePath}", FilePath);
-      File.Delete(FilePath);
-    }
+    _channelBuffer.ReturnBufferToArrayPool();
   }
 }

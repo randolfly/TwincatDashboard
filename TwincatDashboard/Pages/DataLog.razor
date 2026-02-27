@@ -510,11 +510,6 @@
 
     // delete tmp files
     LogDataService.DeleteTmpFiles();
-    // return array pool data
-    foreach (var channel in LogDataService.QuickLogDict.Values)
-    {
-      channel.ReturnArrayToPool();
-    }
 
     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
     GC.Collect();

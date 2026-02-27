@@ -39,11 +39,11 @@ public class AdsComService : IDisposable {
     try {
       var stateInfo = _adsClient.ReadState();
       adsState = stateInfo.AdsState;
-      Debug.WriteLine("ADS State: {0}, Device State: {1}", stateInfo.AdsState, stateInfo.DeviceState);
+      Log.Information("ADS State: {0}, Device State: {1}", stateInfo.AdsState, stateInfo.DeviceState);
     } catch (AdsErrorException ex) {
-      Debug.WriteLine("ADS Error: {0}", ex.Message);
+      Log.Information("ADS Error: {0}", ex.Message);
     } catch (Exception ex) {
-      Debug.WriteLine("General Exception: {0}", ex.Message);
+      Log.Information("General Exception: {0}", ex.Message);
     }
 
     return adsState;
@@ -74,7 +74,7 @@ public class AdsComService : IDisposable {
 
   public void DisconnectAdsServer() {
     _adsClient.Disconnect();
-    Debug.WriteLine("Ads server state: {0}", GetAdsState());
+    Log.Information("Ads server state: {0}", GetAdsState());
   }
 
   public async Task DisconnectAdsServerAsync() {

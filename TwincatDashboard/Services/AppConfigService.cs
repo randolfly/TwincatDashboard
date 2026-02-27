@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using Serilog;
+
+using System.Diagnostics;
 using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -20,7 +22,7 @@ public static class AppConfigService {
   /// </summary>
   /// <param name="configFileFullName">配置文件地址</param>
   public static void LoadConfig(string configFileFullName) {
-    Debug.WriteLine($"LoadConfig: {configFileFullName}");
+    Log.Information($"LoadConfig: {configFileFullName}");
     if (!File.Exists(configFileFullName)) return;
     using var fs = new FileStream(configFileFullName, FileMode.Open);
     AppConfig = JsonSerializer.Deserialize<AppConfig>(fs, JsonSerializerOptions) ?? new AppConfig();
@@ -31,7 +33,7 @@ public static class AppConfigService {
   /// </summary>
   /// <param name="configFileFullName">配置文件地址</param>
   public static void SaveConfig(string configFileFullName) {
-    Debug.WriteLine($"SaveConfig: {configFileFullName}");
+    Log.Information($"SaveConfig: {configFileFullName}");
     if (!Directory.Exists(Path.GetDirectoryName(configFileFullName)))
       Directory.CreateDirectory(Path.GetDirectoryName(configFileFullName)!);
     using var fs = new FileStream(configFileFullName, FileMode.Create);

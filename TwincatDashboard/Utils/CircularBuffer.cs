@@ -46,19 +46,30 @@ public class CircularBuffer<T>(int capacity) : IDisposable where T : struct {
     _end = ++_end % Capacity;
   }
 
-  public ArraySegment<T> RemoveRange(int size) {
-    var result = new ArraySegment<T>();
+  public (ArraySegment<T> First, ArraySegment<T> Second) RemoveRange(int size) {
     size = Math.Min(size, Size);
-    if (_end >= _start) {
-      result = new ArraySegment<T>(_buffer, _start, size);
-    } else {
-      var result1 = new ArraySegment<T>(_buffer, _start, Capacity - _start);
-      var result2 = new ArraySegment<T>(_buffer, 0, size - Capacity + _start);
-      result = new ArraySegment<T>(result1.Concat(result2).ToArray());
-    }
 
-    _start = (_start + size) % Capacity;
-    return result;
+    if (size == 0)
+      return (default, default);
+    if (_end >= _start) {
+      // Data is contiguous
+      var segment = new ArraySegment<T>(_buffer, _start, size);
+      _start = (_start + size) % Capacity;
+      return (segment, default);
+    } else {
+      // Data is wrapped around the end of the buffer
+      int tailCount = Capacity - _start;
+      if (size <= tailCount) {
+        var segment = new ArraySegment<T>(_buffer, _start, size);
+        _start = (_start + size) % Capacity;
+        return (segment, default);
+      } else {
+        var segment1 = new ArraySegment<T>(_buffer, _start, tailCount);
+        var segment2 = new ArraySegment<T>(_buffer, 0, size - tailCount);
+        _start = (size - tailCount) % Capacity;
+        return (segment1, segment2);
+      }
+    }
   }
 
   public void ReturnBufferToArrayPool() {

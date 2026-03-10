@@ -8,20 +8,20 @@ namespace TwincatDashboard.Utils;
 public static class MatlabWriter {
   public static void WriteMatFileHeader(Stream stream) {
     // Write MAT-file header (128 bytes)
-    var header = new byte[128];
+    Span<byte> header = stackalloc byte[128];
     // 1. Description (max 116 bytes)
     var description = Encoding.ASCII.GetBytes(
         "MATLAB 5.0 MAT-file, Platform: .NET, Created on: "
         + DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss")
     );
-    Array.Copy(description, header, Math.Min(description.Length, 116));
+    description.AsSpan(0, Math.Min(description.Length, 116)).CopyTo(header);
     // 2. Subsystem data offset (8 bytes, usually zero)
     // 3. Version (2 bytes) + Endian indicator (2 bytes)
     header[124] = 0x00; // version
     header[125] = 0x01; // version
     header[126] = (byte)'I'; // Little Endian indicator: 'IM'
     header[127] = (byte)'M';
-    stream.Write(header, 0, 128);
+    stream.Write(header);
   }
 
   /// <summary>

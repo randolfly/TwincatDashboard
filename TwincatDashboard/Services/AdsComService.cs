@@ -1,6 +1,7 @@
 ﻿using Serilog;
 
 using System.Diagnostics;
+using System.IO;
 using System.Xml.Linq;
 
 using TwinCAT;
@@ -230,19 +231,32 @@ public class AdsComService : IDisposable {
   }
 
   public List<AdsRouteInfo> ScanAdsRoutes() {
-    var xml = XDocument.Load(AppConstants.AdsRouteXmlPath);
-    var routeList = xml?.Root?.Element("RemoteConnections")?.Elements()
-        .Select(route => new AdsRouteInfo {
-          Name = route.Element("Name")?.Value ?? string.Empty,
-          Address = route.Element("Address")?.Value ?? string.Empty,
-          NetId = route.Element("NetId")?.Value ?? string.Empty
-        }).ToList()!;
-
-    routeList.Add(new AdsRouteInfo {
+    var path = AppConstants.AdsRouteXmlPath;
+    var localRoute = new AdsRouteInfo {
       Name = "Local",
       Address = AmsNetId.Local.ToString(),
       NetId = AmsNetId.Local.ToString()
-    });
-    return routeList;
+    };
+
+    if (!File.Exists(path)) {
+      Log.Error("Ads routes XML file not found at path: {Path}", path);
+      return [localRoute];
+    }
+
+    try {
+      var xml = XDocument.Load(path);
+      var routeList = xml?.Root?.Element("RemoteConnections")?.Elements()
+          .Select(route => new AdsRouteInfo {
+            Name = route.Element("Name")?.Value ?? string.Empty,
+            Address = route.Element("Address")?.Value ?? string.Empty,
+            NetId = route.Element("NetId")?.Value ?? string.Empty
+          }).ToList()!;
+
+      routeList.Add(localRoute);
+      return routeList;
+    } catch (Exception ex) {
+      Log.Error(ex, "Failed to load Ads routes XML");
+      return [localRoute];
+    }
   }
 }

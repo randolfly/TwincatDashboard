@@ -243,20 +243,24 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
 
     var buffer = ArrayPool<byte>.Shared.Rent(256);
     try {
-      foreach (var value in data.First) {
-        if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
-          continue;
+      if (data.First.Count > 0) {
+        foreach (var value in data.First) {
+          if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
+            continue;
 
-        buffer[bytesWritten++] = (byte)'\n';
-        await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
+          buffer[bytesWritten++] = (byte)'\n';
+          await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
+        }
       }
 
-      foreach (var value in data.Second) {
-        if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
-          continue;
+      if (data.Second.Count > 0) {
+        foreach (var value in data.Second) {
+          if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
+            continue;
 
-        buffer[bytesWritten++] = (byte)'\n';
-        await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
+          buffer[bytesWritten++] = (byte)'\n';
+          await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
+        }
       }
     } finally {
       ArrayPool<byte>.Shared.Return(buffer);

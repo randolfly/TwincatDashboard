@@ -233,9 +233,6 @@ public partial class DataLog {
     // delete tmp files
     LogDataService.DeleteTmpFiles();
 
-    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-    GC.Collect();
-
     return true;
   }
 

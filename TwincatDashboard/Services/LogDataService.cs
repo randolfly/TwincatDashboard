@@ -231,7 +231,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
     }
   }
 
-  private static async Task SaveToFileAsync((ArraySegment<double> First, ArraySegment<double> Second) data, string filePath) {
+  private static async Task SaveToFileAsync((Memory<double> First, Memory<double> Second) data, string filePath) {
     await using var fileStream = new FileStream(
         filePath,
         FileMode.Append,
@@ -243,27 +243,21 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
 
     var buffer = ArrayPool<byte>.Shared.Rent(256);
     try {
-      if (data.First.Count > 0) {
-        foreach (var value in data.First) {
-          if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
-            continue;
-
-          buffer[bytesWritten++] = (byte)'\n';
-          await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
-        }
-      }
-
-      if (data.Second.Count > 0) {
-        foreach (var value in data.Second) {
-          if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
-            continue;
-
-          buffer[bytesWritten++] = (byte)'\n';
-          await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
-        }
-      }
+      await SaveMemoryToFile(data.First, fileStream, buffer);
+      await SaveMemoryToFile(data.Second, fileStream, buffer);
     } finally {
       ArrayPool<byte>.Shared.Return(buffer);
+    }
+
+    static async Task SaveMemoryToFile(Memory<double> mem, FileStream fileStream, byte[] buffer) {
+      for (var i = 0; i < mem.Length; i++) {
+        var value = mem.Span[i];
+        if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
+          continue;
+
+        buffer[bytesWritten++] = (byte)'\n';
+        await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
+      }
     }
   }
 

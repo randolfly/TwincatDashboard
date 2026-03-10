@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 
 using Serilog;
+using Serilog.Events;
 
 using System.Text;
 using System.Windows;
@@ -40,22 +41,23 @@ public partial class App : Application {
 
   private void ConfigLogger() {
     Log.Logger = new LoggerConfiguration()
-        .MinimumLevel.Information()
-        .Enrich.FromLogContext()
-        .Enrich.WithMachineName()
-        .Enrich.WithThreadId()
-        .Enrich.WithProperty("Application", "TwinCAT-DashBoard")
-        .Filter.ByExcluding(c =>
-            c.Properties.ContainsKey("Microsoft") || c.Properties.ContainsKey("System")
-        )
-        .WriteTo.Debug(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File(
-            AppConfig.AppLogFileFullName,
-            encoding: Encoding.UTF8,
-            rollingInterval: RollingInterval.Day,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
-        )
-        .CreateLogger();
+      .MinimumLevel.Debug()
+      .MinimumLevel.Override("Masa", LogEventLevel.Warning)
+      .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+      .MinimumLevel.Override("System", LogEventLevel.Information)
+      .MinimumLevel.Override("TwincatDashboard", LogEventLevel.Debug)
+      .Enrich.FromLogContext()
+      .Enrich.WithMachineName()
+      .Enrich.WithThreadId()
+      .Enrich.WithProperty("Application", "TwinCAT-DashBoard")
+      .WriteTo.Debug(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+      .WriteTo.File(
+          AppConfig.AppLogFileFullName,
+          encoding: Encoding.UTF8,
+          rollingInterval: RollingInterval.Day,
+          outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+      )
+      .CreateLogger();
 
     DispatcherUnhandledException += (sender, args) => {
       Log.Fatal(args.Exception, "UI Thread Unhandled exception");

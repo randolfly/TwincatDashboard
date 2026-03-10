@@ -21,6 +21,7 @@ public class LogDataService {
   }
 
   public void RemoveAllChannels() {
+    QuickLogDict.Values.ToList().ForEach(channel => channel.Dispose());
     QuickLogDict.Clear();
   }
 
@@ -224,7 +225,7 @@ public class LogDataChannel(int bufferCapacity, string channelName) : IDisposabl
     _channelBuffer.Add(data);
     DataLength++;
     if (_channelBuffer.Size * 2 >= _channelBuffer.Capacity) {
-      Log.Information($"Buffer is half size, save to file: {FilePath}");
+      Log.Debug($"Buffer is half size, save to file: {FilePath}");
       var dataSrc = _channelBuffer.RemoveRange(_channelBuffer.Size);
       await SaveToFileAsync(dataSrc, FilePath);
     }

@@ -12,7 +12,7 @@ public class AppConfig {
   public AdsConfig AdsConfig { get; set; } = new();
   public LogConfig LogConfig { get; set; } = new();
 
-  #region 配置文件存储路径
+  #region Config File Storage Path
 
   public static string AppName => Assembly.GetCallingAssembly().FullName!.Split(',')[0];
 

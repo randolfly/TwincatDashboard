@@ -46,26 +46,26 @@ public class CircularBuffer<T>(int capacity) : IDisposable where T : struct {
     _end = ++_end % Capacity;
   }
 
-  public (Memory<T> First, Memory<T> Second) RemoveRange(int size) {
+  public (ReadOnlyMemory<T> First, ReadOnlyMemory<T> Second) RemoveRange(int size) {
     size = Math.Min(size, Size);
 
     if (size == 0)
       return (default, default);
     if (_end >= _start) {
       // Data is contiguous
-      var segment = new Memory<T>(_buffer, _start, size);
+      var segment = new ReadOnlyMemory<T>(_buffer, _start, size);
       _start = (_start + size) % Capacity;
       return (segment, default);
     } else {
       // Data is wrapped around the end of the buffer
       int tailCount = Capacity - _start;
       if (size <= tailCount) {
-        var segment = new Memory<T>(_buffer, _start, size);
+        var segment = new ReadOnlyMemory<T>(_buffer, _start, size);
         _start = (_start + size) % Capacity;
         return (segment, default);
       } else {
-        var segment1 = new Memory<T>(_buffer, _start, tailCount);
-        var segment2 = new Memory<T>(_buffer, 0, size - tailCount);
+        var segment1 = new ReadOnlyMemory<T>(_buffer, _start, tailCount);
+        var segment2 = new ReadOnlyMemory<T>(_buffer, 0, size - tailCount);
         _start = (size - tailCount) % Capacity;
         return (segment1, segment2);
       }

@@ -74,9 +74,13 @@ public static class MatlabWriter {
     BinaryPrimitives.WriteInt32LittleEndian(nameTag[4..8], nameLen);
     stream.Write(nameTag);
     stream.Write(nameBytes, 0, nameLen);
-    if (nameLen % 8 != 0)
-      stream.Write(new byte[8 - nameLen % 8], 0, 8 - nameLen % 8); // padding
-
+    
+    if (nameLen % 8 != 0) {
+      for (var i = 0; i < 8 - nameLen % 8; i++) {
+        stream.WriteByte(0); // padding
+      }
+    }
+    
     // Data
     Span<byte> dataTag = stackalloc byte[8];
     BinaryPrimitives.WriteInt32LittleEndian(dataTag[..4], 9); // miDOUBLE

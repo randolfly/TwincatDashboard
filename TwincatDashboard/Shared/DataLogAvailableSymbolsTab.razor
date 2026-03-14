@@ -1,0 +1,100 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<MCard Class="datalog-card overflow-auto">
+  <MCardTitle>
+    <div class="datalog-toolbar">
+      <div class="datalog-toolbar-title">Available Symbols</div>
+      <div class="datalog-toolbar-actions">
+        <LogConfigDialog Disabled="EditingDisabled" OnOpenFolder="OpenConfigFolder"/>
+        <MTooltip Bottom>
+          <ActivatorContent>
+            <MButton @attributes="@context.Attrs"
+                     Color="primary"
+                     Disabled="EditingDisabled"
+                     OnClick="GetAvailableSymbols"
+                     Icon>
+              <MIcon>mdi-refresh</MIcon>
+            </MButton>
+          </ActivatorContent>
+          <ChildContent>
+            <span>get ads symbols</span>
+          </ChildContent>
+        </MTooltip>
+      </div>
+      <div class="datalog-toolbar-search">
+        <MInputsFilter OnFieldChanged="OnSearchChanged">
+          <MTextField @bind-Value="SearchTmpName"
+                      AppendIcon="mdi-magnify"
+                      Label="Search"
+                      SingleLine
+                      PersistentPlaceholder
+                      Placeholder="Press enter to trigger search action"
+                      Clearable
+                      HideDetails="true"></MTextField>
+        </MInputsFilter>
+      </div>
+    </div>
+  </MCardTitle>
+
+  @if (AvailableSymbols.Count == 0)
+  {
+    <div>
+      <MCardText>
+        No available symbols, Update the list by clicking the refresh button
+      </MCardText>
+    </div>
+  }
+  else
+  {
+    <MDataTable Headers="Headers"
+                Items="AvailableSymbols"
+                ItemKey="s => s.FullName"
+                Search="@SearchName"
+                CustomFilter="CustomFilter"
+                ResizeMode="DataTableResizeMode.Auto"
+                Dense
+                FooterProps="@(props =>
+                             {
+                               props.ShowFirstLastPage = true;
+                               props.FirstIcon = "mdi-page-first";
+                               props.LastIcon = "mdi-page-last";
+                               props.PrevIcon = "mdi-chevron-left";
+                               props.NextIcon = "mdi-chevron-right";
+                             })">
+      <ItemColContent>
+        @switch (context.Header.Value)
+        {
+          case nameof(SymbolInfo.IsLog):
+            <MSimpleCheckbox Disabled="EditingDisabled"
+                             @bind-Value="context.Item.IsLog"/>
+            break;
+          case nameof(SymbolInfo.IsPlot):
+            <MSimpleCheckbox Disabled="EditingDisabled"
+                             @bind-Value="context.Item.IsPlot"/>
+            break;
+          default:
+            @context.Value
+            break;
+        }
+      </ItemColContent>
+    </MDataTable>
+  }
+</MCard>
+
+@code {
+  [Parameter] public bool EditingDisabled { get; set; }
+  [Parameter] public List<SymbolInfo> AvailableSymbols { get; set; } = [];
+  [Parameter] public List<DataTableHeader<SymbolInfo>> Headers { get; set; } = [];
+
+  [Parameter] public string? SearchName { get; set; }
+  [Parameter] public string? SearchTmpName { get; set; }
+  [Parameter] public EventCallback<string?> SearchTmpNameChanged { get; set; }
+
+  [Parameter] public EventCallback<InputsFilterFieldChangedEventArgs> OnSearchChanged { get; set; }
+  [Parameter] public EventCallback<MouseEventArgs> GetAvailableSymbols { get; set; }
+  [Parameter] public EventCallback<MouseEventArgs> OpenConfigFolder { get; set; }
+
+  [Parameter] public Func<IEnumerable<SymbolInfo>, IEnumerable<ItemValue<SymbolInfo>>, string?, IEnumerable<SymbolInfo>> CustomFilter { get; set; } =
+    static (items, _, __) => items;
+}
+

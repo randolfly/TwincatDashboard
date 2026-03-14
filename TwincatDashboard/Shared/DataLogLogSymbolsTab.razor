@@ -1,0 +1,119 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<MCard Class="datalog-card overflow-auto">
+  <MCardTitle>
+    <div class="datalog-toolbar">
+      <div class="datalog-toolbar-title">Log Symbols</div>
+      <div class="datalog-toolbar-actions">
+        <LogConfigDialog Disabled="EditingDisabled" OnOpenFolder="OpenConfigFolder"/>
+        <MTooltip Bottom>
+          <ActivatorContent>
+            <MSwitch @bind-Value="StartLogging"
+                     Disabled="IsLoggingBusy"
+                     LeftIcon="mdi-stop"
+                     RightIcon="mdi-play"
+                     Label="@(StartLogging ? "Logging On" : "Logging Off")"
+                     Color="primary accent-3"
+                     TrackColor="#E5E6EB">
+            </MSwitch>
+          </ActivatorContent>
+          <ChildContent>
+            <span>start/stop log</span>
+          </ChildContent>
+        </MTooltip>
+        <MButton Color="primary" Icon Disabled="EditingDisabled" OnClick="CloseAllPlotWindows">
+          <MTooltip Bottom>
+            <ActivatorContent Context="tooltipCtx">
+              <MIcon @attributes="tooltipCtx.Attrs">mdi-close-circle</MIcon>
+            </ActivatorContent>
+            <ChildContent>
+              <span>close all plot windows</span>
+            </ChildContent>
+          </MTooltip>
+        </MButton>
+      </div>
+      <div class="datalog-toolbar-search">
+        <MInputsFilter OnFieldChanged="OnSearchChanged">
+          <MTextField @bind-Value="SearchTmpName"
+                      AppendIcon="mdi-magnify"
+                      Label="Search"
+                      SingleLine
+                      PersistentPlaceholder
+                      Placeholder="Press enter to trigger search action"
+                      Clearable
+                      HideDetails="true"></MTextField>
+        </MInputsFilter>
+      </div>
+    </div>
+  </MCardTitle>
+
+  @if (LogSymbols.Count == 0)
+  {
+    <div>
+      <MCardText>
+        No log symbols selected, Update the list by selecting symbols from the available symbols
+      </MCardText>
+    </div>
+  }
+  else
+  {
+    <MDataTable Headers="Headers"
+                Items="LogSymbols"
+                ItemKey="s => s.FullName"
+                Search="@SearchName"
+                CustomFilter="CustomFilter"
+                ResizeMode="DataTableResizeMode.Auto"
+                Dense
+                FooterProps="@(props =>
+                             {
+                               props.ShowFirstLastPage = true;
+                               props.FirstIcon = "mdi-page-first";
+                               props.LastIcon = "mdi-page-last";
+                               props.PrevIcon = "mdi-chevron-left";
+                               props.NextIcon = "mdi-chevron-right";
+                             })">
+      <ItemColContent>
+        @switch (context.Header.Value)
+        {
+          case nameof(SymbolInfo.IsPlot):
+            <MSimpleCheckbox Disabled="EditingDisabled"
+                             @bind-Value="context.Item.IsPlot"/>
+            break;
+          case nameof(SymbolInfo.IsQuickLog):
+            <MSimpleCheckbox Disabled="EditingDisabled"
+                             @bind-Value="context.Item.IsQuickLog"/>
+            break;
+          case nameof(SymbolInfo.IsLog):
+            <MSimpleCheckbox Disabled="EditingDisabled"
+                             @bind-Value="context.Item.IsLog"/>
+            break;
+          default:
+            @context.Value
+            break;
+        }
+      </ItemColContent>
+    </MDataTable>
+  }
+</MCard>
+
+@code {
+  [Parameter] public bool EditingDisabled { get; set; }
+  [Parameter] public bool IsLoggingBusy { get; set; }
+
+  [Parameter] public bool StartLogging { get; set; }
+  [Parameter] public EventCallback<bool> StartLoggingChanged { get; set; }
+
+  [Parameter] public List<SymbolInfo> LogSymbols { get; set; } = [];
+  [Parameter] public List<DataTableHeader<SymbolInfo>> Headers { get; set; } = [];
+
+  [Parameter] public string? SearchName { get; set; }
+  [Parameter] public string? SearchTmpName { get; set; }
+  [Parameter] public EventCallback<string?> SearchTmpNameChanged { get; set; }
+
+  [Parameter] public EventCallback<InputsFilterFieldChangedEventArgs> OnSearchChanged { get; set; }
+  [Parameter] public EventCallback<MouseEventArgs> CloseAllPlotWindows { get; set; }
+  [Parameter] public EventCallback<MouseEventArgs> OpenConfigFolder { get; set; }
+
+  [Parameter] public Func<IEnumerable<SymbolInfo>, IEnumerable<ItemValue<SymbolInfo>>, string?, IEnumerable<SymbolInfo>> CustomFilter { get; set; } =
+    static (items, _, __) => items;
+}

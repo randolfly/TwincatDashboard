@@ -9,6 +9,8 @@ using Serilog;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime;
+using System.Threading;
+using System.Timers;
 
 using TwinCAT.Ads;
 using TwinCAT.Ads.TypeSystem;
@@ -23,21 +25,20 @@ using Timer = System.Timers.Timer;
 
 namespace TwincatDashboard.Pages;
 
-public partial class DataLog {
+public partial class DataLog : IAsyncDisposable {
   private LogConfig _logConfig = new();
 
   private bool _startLogging;
+  private bool _isLoggingBusy;
 
   public bool StartLogging {
     get => _startLogging;
-    set {
-      if (value) {
-        _startLogging = StartLog();
-      } else {
-        _startLogging = !Task.Run(StopLogAsync).Result;
-      }
-    }
+    set => _ = SetLoggingStateAsync(value);
   }
+
+  public bool IsLoggingBusy => _isLoggingBusy;
+
+  public bool EditingDisabled => _startLogging || _isLoggingBusy;
 
   private string? _searchAvailableSymbolName;
   private string? _searchAvailableSymbolTmpName;
@@ -51,8 +52,10 @@ public partial class DataLog {
   private List<SymbolInfo> SlowLogSymbols => LogSymbols.Where(x => x.IsSlowLog).ToList();
 
   private readonly Timer _slowLogTimer = new();
+  private readonly SemaphoreSlim _slowLogGate = new(1, 1);
 
   private readonly Dictionary<uint, SymbolInfo> _symbolsDict = [];
+  private readonly Dictionary<string, SymbolInfo> _availableSymbolsByFullName = new(StringComparer.Ordinal);
   private bool _isFirstGetAvailableSymbols = true;
 
   #region UI Params
@@ -80,26 +83,63 @@ public partial class DataLog {
   protected override void OnInitialized() {
     _logConfig = AppConfigService.AppConfig.LogConfig;
     _slowLogTimer.Interval = _logConfig.SlowLogPeriod;
-    _slowLogTimer.Elapsed += async (sender, e) => await SlowLogTimerElapsedAsync();
+    _slowLogTimer.Elapsed += OnSlowLogTimerElapsed;
+  }
+
+  private void OnSlowLogTimerElapsed(object? sender, ElapsedEventArgs e) {
+    _ = SlowLogTimerElapsedAsync();
+  }
+
+  private async Task SetLoggingStateAsync(bool shouldStart) {
+    if (_isLoggingBusy) return;
+    if (shouldStart == _startLogging) return;
+
+    _startLogging = shouldStart; // optimistic UI; corrected if start fails
+    _isLoggingBusy = true;
+    await InvokeAsync(StateHasChanged);
+
+    try {
+      if (shouldStart) {
+        _startLogging = StartLog();
+      } else {
+        await StopLogAsync();
+      }
+    } finally {
+      _isLoggingBusy = false;
+      await InvokeAsync(StateHasChanged);
+    }
   }
 
   private async Task SlowLogTimerElapsedAsync() {
-    foreach (var symbolName in LogDataService.SlowLogDict.Keys) {
-      var symbol = _availableSymbols.FirstOrDefault(s => s.FullName == symbolName)!;
-      var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
-      if (dataType == null) {
-        Log.Warning("ManagedType is null for symbol: {0}, Raw Type: {1}", symbol.FullName, symbol.Symbol.DataType);
-        return;
-      }
+    // Prevent overlapping timer callbacks: if the previous tick is still running, skip this tick.
+    if (!await _slowLogGate.WaitAsync(0)) return;
 
-      var value = await AdsComService.ReadPlcSymbolValueAsync(symbol.FullName, dataType);
-      if (value is null) {
-        Log.Warning("Value is null for symbol: {0}, Raw Type: {1}", symbol.FullName, symbol.Symbol.DataType);
-        return;
-      }
+    try {
+      var slowLogKeys = LogDataService.SlowLogDict.Keys.ToArray();
+      foreach (var symbolName in slowLogKeys) {
+        if (!_availableSymbolsByFullName.TryGetValue(symbolName, out var symbol)) continue;
 
-      var result = SymbolExtension.ConvertObjectToDouble(value, dataType);
-      LogDataService.AddSlowLogData(symbol.FullName, result);
+        try {
+          var dataType = (symbol.Symbol.DataType as DataType)?.ManagedType;
+          if (dataType == null) {
+            Log.Warning("ManagedType is null for symbol: {Symbol}, Raw Type: {RawType}", symbol.FullName, symbol.Symbol.DataType);
+            continue;
+          }
+
+          var value = await AdsComService.ReadPlcSymbolValueAsync(symbol.FullName, dataType);
+          if (value is null) {
+            Log.Warning("Value is null for symbol: {Symbol}, Raw Type: {RawType}", symbol.FullName, symbol.Symbol.DataType);
+            continue;
+          }
+
+          var result = SymbolExtension.ConvertObjectToDouble(value, dataType);
+          LogDataService.AddSlowLogData(symbol.FullName, result);
+        } catch (Exception ex) {
+          Log.Error(ex, "Slow log tick failed for symbol: {Symbol}", symbolName);
+        }
+      }
+    } finally {
+      _slowLogGate.Release();
     }
   }
 
@@ -121,6 +161,7 @@ public partial class DataLog {
     }
 
     _availableSymbols.Sort((a, b) => string.Compare(a.FullName, b.FullName, StringComparison.Ordinal));
+    RebuildAvailableSymbolsIndex();
     Log.Information("Available symbols: {0}", _availableSymbols.Count);
 
     // add default quick log symbol: AdsConstants.TaskCycleCountName
@@ -128,7 +169,7 @@ public partial class DataLog {
     if (taskCycleCountSymbol != null) taskCycleCountSymbol.IsQuickLog = true;
 
     // Set default log symbols by checking the config
-    _availableSymbols.AsParallel().ForAll(symbol => {
+    foreach (var symbol in _availableSymbols) {
       if (_logConfig.LogSymbols.Contains(symbol.FullName)) {
         symbol.IsLog = true;
         if (_logConfig.QuickLogSymbols.Contains(symbol.FullName)) {
@@ -139,9 +180,17 @@ public partial class DataLog {
       if (_logConfig.PlotSymbols.Contains(symbol.FullName)) {
         symbol.IsPlot = true;
       }
-    });
-    Task.Run(async () => _logConfig.QuickLogPeriod = await AdsComService.GetTaskCycleTimeAsync());
+    }
+
+    _ = Task.Run(async () => _logConfig.QuickLogPeriod = await AdsComService.GetTaskCycleTimeAsync());
     _isFirstGetAvailableSymbols = false;
+  }
+
+  private void RebuildAvailableSymbolsIndex() {
+    _availableSymbolsByFullName.Clear();
+    foreach (var symbol in _availableSymbols) {
+      _availableSymbolsByFullName[symbol.FullName] = symbol;
+    }
   }
 
   /// <summary>
@@ -149,6 +198,11 @@ public partial class DataLog {
   /// </summary>
   /// <returns>true->start log successfully, false->error</returns>
   private bool StartLog() {
+    if (AdsComService.GetAdsState() == AdsState.Invalid) {
+      Log.Information("Ads server is not connected");
+      return false;
+    }
+
     _slowLogTimer.Interval = _logConfig.SlowLogPeriod;
     if (LogSymbols.Count == 0) {
       Log.Information("No log symbols selected");
@@ -209,7 +263,7 @@ public partial class DataLog {
     // quick log data: load data from tmp folder, the actual length of log data is LogDataService.QuickLogDict[channel].DataLength
     var quickLogResult = await LogDataService.LoadAllChannelsAsync();
     var slowLogResult = new Dictionary<string, double[]>();
-    foreach (var slowLog in LogDataService.SlowLogDict) {
+    foreach (var slowLog in LogDataService.SlowLogDict.ToArray()) {
       slowLogResult.Add(slowLog.Key, slowLog.Value.ToArray());
     }
 
@@ -219,15 +273,27 @@ public partial class DataLog {
       Directory.CreateDirectory(_logConfig.FolderName);
     }
 
-    var exportQuickDataLength = LogDataService.QuickLogDict.Values.Min(channel => channel.DataLength);
-    var exportSlowDataLength = LogDataService.SlowLogDict.Values.Min(list => list.Count);
-    await LogDataService.ExportDataAsync(quickLogResult,
-      _logConfig.QuickLogFileFullName, _logConfig.FileType, exportQuickDataLength);
-    await LogDataService.ExportDataAsync(slowLogResult,
-      _logConfig.SlowLogFileFullName, _logConfig.FileType, exportSlowDataLength);
+    var exportQuickDataLength = LogDataService.QuickLogDict.Count > 0
+      ? LogDataService.QuickLogDict.Values.Min(channel => channel.DataLength)
+      : 0;
+    var exportSlowDataLength = LogDataService.SlowLogDict.Count > 0
+      ? LogDataService.SlowLogDict.Values.Min(list => list.Count)
+      : 0;
+
+    if (quickLogResult.Count > 0 && exportQuickDataLength > 0) {
+      await LogDataService.ExportDataAsync(quickLogResult,
+        _logConfig.QuickLogFileFullName, _logConfig.FileType, exportQuickDataLength);
+    }
+
+    if (slowLogResult.Count > 0 && exportSlowDataLength > 0) {
+      await LogDataService.ExportDataAsync(slowLogResult,
+        _logConfig.SlowLogFileFullName, _logConfig.FileType, exportSlowDataLength);
+    }
 
     // plot
-    LogPlotService.ShowAllChannelsWithNewData(quickLogResult, exportQuickDataLength, _logConfig.QuickLogPeriod);
+    if (quickLogResult.Count > 0 && exportQuickDataLength > 0 && PlotSymbols.Count > 0) {
+      LogPlotService.ShowAllChannelsWithNewData(quickLogResult, exportQuickDataLength, _logConfig.QuickLogPeriod);
+    }
     LogDataService.RemoveAllSlowLog();
 
     // delete tmp files
@@ -243,7 +309,11 @@ public partial class DataLog {
     AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
   }
 
-  private async void AdsNotificationHandler(object? sender, AdsNotificationEventArgs e) {
+  private void AdsNotificationHandler(object? sender, AdsNotificationEventArgs e) {
+    _ = HandleAdsNotificationAsync(e);
+  }
+
+  private async Task HandleAdsNotificationAsync(AdsNotificationEventArgs e) {
     try {
       if (!_symbolsDict.TryGetValue(e.Handle, out var symbol)) {
         Log.Warning("Symbol not found for handle: {0}", e.Handle);
@@ -281,11 +351,11 @@ public partial class DataLog {
   }
 
   private static int GetSimilarityScore(string searchText, SymbolInfo symbolInfo) {
-    return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.FullName.ToLower());
+    return Fuzz.PartialTokenSetRatio(searchText, symbolInfo.FullName.ToLowerInvariant());
   }
 
   private void CloseAllPlotWindows(MouseEventArgs obj) {
-    if (StartLogging) return;
+    if (EditingDisabled) return;
     LogPlotService.RemoveAllChannels();
   }
 
@@ -307,6 +377,23 @@ public partial class DataLog {
       FileName = AppConfig.FolderName,
       UseShellExecute = true
     });
+  }
+
+  public async ValueTask DisposeAsync() {
+    try {
+      _slowLogTimer.Elapsed -= OnSlowLogTimerElapsed;
+      if (_startLogging) {
+        _startLogging = false;
+        await StopLogAsync();
+      }
+
+      _slowLogTimer.Stop();
+      _slowLogTimer.Dispose();
+    } catch (Exception ex) {
+      Log.Error(ex, "Error while disposing DataLog component");
+    } finally {
+      _slowLogGate.Dispose();
+    }
   }
 
 }

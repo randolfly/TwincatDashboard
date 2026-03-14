@@ -1,0 +1,16 @@
+.log-config-cardtext {
+  padding: 8px;
+}
+
+.log-config-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.log-config-title {
+  flex-grow: 1;
+}
+

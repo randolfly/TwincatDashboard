@@ -4,263 +4,34 @@
 @page "/"
 
 
-<div style="height: 100vh; padding-bottom: 8px">
-  <MTabs Style="height: 100%" Grow>
+<div class="datalog-page">
+  <MTabs Class="datalog-tabs" Grow>
     <MTab>Select Symbols</MTab>
     <MTab Disabled="!AdsComService.IsAdsConnected">Log and Plot Symbols</MTab>
     <MTabItem>
-      <MCard Class="overflow-auto">
-        <MCardTitle>
-          <div class="flex-container">
-            <div>Available Symbols</div>
-            <div>
-              <MDialog MaxWidth="500">
-                <ActivatorContent Context="dialogCtx">
-                  <MButton @attributes="dialogCtx.Attrs" Color="primary" Icon>
-                    <MTooltip Bottom>
-                      <ActivatorContent Context="tooltipCtx">
-                        <MIcon @attributes="tooltipCtx.Attrs">mdi-wrench</MIcon>
-                      </ActivatorContent>
-                      <ChildContent>
-                        <span>open log config</span>
-                      </ChildContent>
-                    </MTooltip>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <MCard>
-                    <MCardText Style="padding: 8px">
-                      <div style="display: flex; flex-direction: row; gap: 12px; align-items: center; padding-top: 4px">
-                        <div class="text-h6" style="flex-grow: 1;">Log Config</div>
-                        <div>
-                          <MButton Color="primary" Icon OnClick="OpenConfigFolder">
-                            <MTooltip Bottom>
-                              <ActivatorContent Context="tooltipCtx">
-                                <MIcon @attributes="tooltipCtx.Attrs">mdi-folder</MIcon>
-                              </ActivatorContent>
-                              <ChildContent>
-                                <span>open config folder</span>
-                              </ChildContent>
-                            </MTooltip>
-                          </MButton>
-                        </div>
-                      </div>
-                    </MCardText>
-                    <MDivider/>
-                    <LogSetting/>
-                  </MCard>
-                </ChildContent>
-              </MDialog>
-            </div>
-            <div>
-              <MTooltip Bottom>
-                <ActivatorContent>
-                  <MButton @attributes="@context.Attrs"
-                           Color="primary"
-                           OnClick="GetAvailableSymbols"
-                           Icon>
-                    <MIcon>mdi-refresh</MIcon>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <span>get ads symbols</span>
-                </ChildContent>
-              </MTooltip>
-            </div>
-            <div style="flex-grow: 1;" Class="mx-2; mt-n2">
-              <MInputsFilter OnFieldChanged="OnSearchAvailableSymbolNameChanged">
-                <MTextField @bind-Value="_searchAvailableSymbolTmpName"
-                            AppendIcon="mdi-magnify"
-                            Label="Search"
-                            SingleLine
-                            PersistentPlaceholder
-                            Placeholder="Press enter to trigger search action"
-                            Clearable
-                            HideDetails="true"></MTextField>
-              </MInputsFilter>
-            </div>
-          </div>
-        </MCardTitle>
-        @if (_availableSymbols.Count == 0)
-        {
-          <div>
-            <MCardText>
-              No available symbols, Update the list by clicking the refresh button
-            </MCardText>
-          </div>
-        }
-        else
-        {
-          <MDataTable Headers="_availableSymbolHeaders"
-                      Items="_availableSymbols"
-                      ItemKey="s => s.FullName"
-                      Search="@_searchAvailableSymbolName"
-                      CustomFilter="FilterSymbolBySimilarityScore"
-                      ResizeMode="DataTableResizeMode.Auto"
-                      Dense
-                      FooterProps="@(props =>
-                                   {
-                                     props.ShowFirstLastPage = true;
-                                     props.FirstIcon = "mdi-page-first";
-                                     props.LastIcon = "mdi-page-last";
-                                     props.PrevIcon = "mdi-chevron-left";
-                                     props.NextIcon = "mdi-chevron-right";
-                                   })">
-            <ItemColContent>
-              @switch (context.Header.Value)
-              {
-                case nameof(SymbolInfo.IsLog):
-                  <MSimpleCheckbox Disabled="StartLogging"
-                                   @bind-Value="context.Item.IsLog"/>
-                  break;
-                case nameof(SymbolInfo.IsPlot):
-                  <MSimpleCheckbox Disabled="StartLogging"
-                                   @bind-Value="context.Item.IsPlot"/>
-                  break;
-                default:
-                  @context.Value
-                  break;
-              }
-            </ItemColContent>
-          </MDataTable>
-        }
-      </MCard>
+      <DataLogAvailableSymbolsTab EditingDisabled="EditingDisabled"
+                                  AvailableSymbols="_availableSymbols"
+                                  Headers="_availableSymbolHeaders"
+                                  SearchName="_searchAvailableSymbolName"
+                                  @bind-SearchTmpName="_searchAvailableSymbolTmpName"
+                                  OnSearchChanged="OnSearchAvailableSymbolNameChanged"
+                                  GetAvailableSymbols="GetAvailableSymbols"
+                                  OpenConfigFolder="OpenConfigFolder"
+                                  CustomFilter="FilterSymbolBySimilarityScore"/>
     </MTabItem>
 
     <MTabItem>
-      <MCard Class="overflow-auto">
-        <MCardTitle>
-          <div class="flex-container">
-            <div>Log Symbols</div>
-            <div style="flex-grow: 1;" Class="mx-2; mt-n2">
-              <MInputsFilter OnFieldChanged="OnSearchLogSymbolNameChanged">
-                <MTextField @bind-Value="_searchLogSymbolTmpName"
-                            AppendIcon="mdi-magnify"
-                            Label="Search"
-                            SingleLine
-                            PersistentPlaceholder
-                            Placeholder="Press enter to trigger search action"
-                            Clearable
-                            HideDetails="true"></MTextField>
-              </MInputsFilter>
-            </div>
-            <div>
-              <MDialog MaxWidth="500">
-                <ActivatorContent Context="dialogCtx">
-                  <MButton @attributes="dialogCtx.Attrs" Color="primary" Icon>
-                    <MTooltip Bottom>
-                      <ActivatorContent Context="tooltipCtx">
-                        <MIcon @attributes="tooltipCtx.Attrs">mdi-wrench</MIcon>
-                      </ActivatorContent>
-                      <ChildContent>
-                        <span>open log config</span>
-                      </ChildContent>
-                    </MTooltip>
-                  </MButton>
-                </ActivatorContent>
-                <ChildContent>
-                  <MCard>
-                    <MCardText Style="padding: 8px">
-                      <div style="display: flex; flex-direction: row; gap: 12px; align-items: center; padding-top: 4px">
-                        <div class="text-h6" style="flex-grow: 1;">Log Config</div>
-                        <div>
-                          <MButton Color="primary" Icon OnClick="OpenConfigFolder">
-                            <MTooltip Bottom>
-                              <ActivatorContent Context="tooltipCtx">
-                                <MIcon @attributes="tooltipCtx.Attrs">mdi-folder</MIcon>
-                              </ActivatorContent>
-                              <ChildContent>
-                                <span>open config folder</span>
-                              </ChildContent>
-                            </MTooltip>
-                          </MButton>
-                        </div>
-                      </div>
-                    </MCardText>
-                    <MDivider/>
-                    <LogSetting/>
-                  </MCard>
-                </ChildContent>
-              </MDialog>
-            </div>
-            <div>
-              <MTooltip Bottom>
-                <ActivatorContent>
-                  <MSwitch @bind-Value="StartLogging"
-                           LeftIcon="mdi-stop"
-                           RightIcon="mdi-play"
-                           Label="@(StartLogging ? "Logging On" : "Logging Off")"
-                           Color="primary accent-3"
-                           TrackColor="#E5E6EB">
-                  </MSwitch>
-                </ActivatorContent>
-                <ChildContent>
-                  <span>start/stop log</span>
-                </ChildContent>
-              </MTooltip>
-            </div>
-            <div>
-              <MButton Color="primary" Icon OnClick="CloseAllPlotWindows">
-                <MTooltip Bottom>
-                  <ActivatorContent Context="tooltipCtx">
-                    <MIcon @attributes="tooltipCtx.Attrs">mdi-close-circle</MIcon>
-                  </ActivatorContent>
-                  <ChildContent>
-                    <span>close all plot windows</span>
-                  </ChildContent>
-                </MTooltip>
-              </MButton>
-            </div>
-          </div>
-        </MCardTitle>
-        @if (LogSymbols.Count == 0)
-        {
-          <div>
-            <MCardText>
-              No log symbols selected, Update the list by selecting symbols from the available symbols
-            </MCardText>
-          </div>
-        }
-        else
-        {
-          <MDataTable Headers="_logSymbolHeaders"
-                      Items="LogSymbols"
-                      ItemKey="s => s.FullName"
-                      Search="@_searchLogSymbolName"
-                      CustomFilter="FilterSymbolBySimilarityScore"
-                      ResizeMode="DataTableResizeMode.Auto"
-                      Dense
-                      FooterProps="@(props =>
-                                   {
-                                     props.ShowFirstLastPage = true;
-                                     props.FirstIcon = "mdi-page-first";
-                                     props.LastIcon = "mdi-page-last";
-                                     props.PrevIcon = "mdi-chevron-left";
-                                     props.NextIcon = "mdi-chevron-right";
-                                   })">
-            <ItemColContent>
-              @switch (context.Header.Value)
-              {
-                case nameof(SymbolInfo.IsPlot):
-                  <MSimpleCheckbox Disabled="StartLogging"
-                                   @bind-Value="context.Item.IsPlot"/>
-                  break;
-                case nameof(SymbolInfo.IsQuickLog):
-                  <MSimpleCheckbox Disabled="StartLogging"
-                                   @bind-Value="context.Item.IsQuickLog"/>
-                  break;
-                case nameof(SymbolInfo.IsLog):
-                  <MSimpleCheckbox Disabled="StartLogging"
-                                   @bind-Value="context.Item.IsLog"/>
-                  break;
-                default:
-                  @context.Value
-                  break;
-              }
-            </ItemColContent>
-          </MDataTable>
-        }
-      </MCard>
+      <DataLogLogSymbolsTab EditingDisabled="EditingDisabled"
+                            IsLoggingBusy="IsLoggingBusy"
+                            @bind-StartLogging="StartLogging"
+                            LogSymbols="LogSymbols"
+                            Headers="_logSymbolHeaders"
+                            SearchName="_searchLogSymbolName"
+                            @bind-SearchTmpName="_searchLogSymbolTmpName"
+                            OnSearchChanged="OnSearchLogSymbolNameChanged"
+                            CloseAllPlotWindows="CloseAllPlotWindows"
+                            OpenConfigFolder="OpenConfigFolder"
+                            CustomFilter="FilterSymbolBySimilarityScore"/>
     </MTabItem>
   </MTabs>
 </div>

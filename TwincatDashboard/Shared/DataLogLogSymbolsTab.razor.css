@@ -1,0 +1,30 @@
+.datalog-card {
+  height: 100%;
+}
+
+.datalog-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.datalog-toolbar-title {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.datalog-toolbar-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.datalog-toolbar-search {
+  flex-grow: 1;
+  min-width: 240px;
+}
+

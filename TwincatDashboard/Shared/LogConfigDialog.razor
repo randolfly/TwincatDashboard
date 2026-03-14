@@ -1,0 +1,43 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<MDialog MaxWidth="500">
+  <ActivatorContent Context="dialogCtx">
+    <MButton @attributes="dialogCtx.Attrs" Color="primary" Icon Disabled="Disabled">
+      <MTooltip Bottom>
+        <ActivatorContent Context="tooltipCtx">
+          <MIcon @attributes="tooltipCtx.Attrs">mdi-wrench</MIcon>
+        </ActivatorContent>
+        <ChildContent>
+          <span>open log config</span>
+        </ChildContent>
+      </MTooltip>
+    </MButton>
+  </ActivatorContent>
+  <ChildContent>
+    <MCard>
+      <MCardText Class="log-config-cardtext">
+        <div class="log-config-header">
+          <div class="text-h6 log-config-title">Log Config</div>
+          <MButton Color="primary" Icon Disabled="Disabled" OnClick="OnOpenFolder">
+            <MTooltip Bottom>
+              <ActivatorContent Context="tooltipCtx">
+                <MIcon @attributes="tooltipCtx.Attrs">mdi-folder</MIcon>
+              </ActivatorContent>
+              <ChildContent>
+                <span>open config folder</span>
+              </ChildContent>
+            </MTooltip>
+          </MButton>
+        </div>
+      </MCardText>
+      <MDivider/>
+      <LogSetting/>
+    </MCard>
+  </ChildContent>
+</MDialog>
+
+@code {
+  [Parameter] public bool Disabled { get; set; }
+  [Parameter] public EventCallback<MouseEventArgs> OnOpenFolder { get; set; }
+}
+

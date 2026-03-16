@@ -5,6 +5,8 @@ using System.Buffers.Text;
 using System.IO;
 using System.Text;
 
+using MatFileIO;
+
 using TwincatDashboard.Models;
 using TwincatDashboard.Utils;
 
@@ -168,17 +170,11 @@ public class LogDataService {
       //await Task.Run(() =>
       //    MathNet.Numerics.Data.Matlab.MatlabWriter.Write(fileName + ".mat", exportMatDict)
       //);
-      using var fs = new FileStream(fileName + ".mat",
-          FileMode.Create,
-          FileAccess.Write);
-      MatlabWriter.WriteMatFileHeader(fs);
+      await using var mw = new MatWriter(fileName + ".mat");
+
       foreach (var keyValuePair in dataSrc) {
-        var data = new ReadOnlySpan<double>(keyValuePair.Value);
-        MatlabWriter.WriteArray(
-            fs,
-            FormatNameForMatFile(keyValuePair.Key),
-            data,
-            dataLength);
+        var data = new Memory<double>(keyValuePair.Value, 0, dataLength);
+        await mw.WriteArrayAsync(FormatNameForMatFile(keyValuePair.Key), data);
       }
     }
 

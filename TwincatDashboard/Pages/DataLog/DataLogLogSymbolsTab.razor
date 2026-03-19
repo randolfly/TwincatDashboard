@@ -47,7 +47,7 @@
     </div>
   </MCardTitle>
 
-  @if (LogSymbols.Count == 0)
+  @if (!LogSymbols.Any())
   {
     <div>
       <MCardText>
@@ -103,7 +103,7 @@
   [Parameter] public bool StartLogging { get; set; }
   [Parameter] public EventCallback<bool> StartLoggingChanged { get; set; }
 
-  [Parameter] public List<SymbolInfo> LogSymbols { get; set; } = [];
+  [Parameter] public IEnumerable<SymbolInfo> LogSymbols { get; set; } = Enumerable.Empty<SymbolInfo>();
   [Parameter] public List<DataTableHeader<SymbolInfo>> Headers { get; set; } = [];
 
   [Parameter] public string? SearchName { get; set; }

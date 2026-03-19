@@ -1,21 +1,18 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 using System.Windows;
-
-using TwincatDashboard.Models;
-using TwincatDashboard.Services;
 
 namespace TwincatDashboard;
 
 /// <summary>
-///     Interaction logic for MainWindow.xaml
+///   Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window {
-  public MainWindow() {
+  public MainWindow(IServiceProvider services, ILogger<MainWindow> logger) {
     InitializeComponent();
-    Log.Information("MainWindow initialized");
 
+    BlazorWebView.Services = services;
+    logger.LogInformation("MainWindow initialized");
   }
 }
+

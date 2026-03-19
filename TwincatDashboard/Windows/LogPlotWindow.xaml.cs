@@ -64,14 +64,6 @@ public partial class LogPlotWindow : Window {
 
   public void UpdatePlot(double newData) {
     _dataStreamer.Add(newData);
-    LogPlot.Plot.GetPlottables<Marker>()
-        .ToList()
-        .ForEach(m => m.X -= 1);
-
-    LogPlot.Plot.GetPlottables<Marker>()
-        .Where(m => m.X < 0)
-        .ToList()
-        .ForEach(m => LogPlot.Plot.Remove(m));
   }
 
   public void SetPlotViewWindowPosById(int windowId) {

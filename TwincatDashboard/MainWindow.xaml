@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterScreen"
         Title="TwinCAT Dashboard" Height="600" Width="900">
   <Grid>
-    <blazor:BlazorWebView HostPage="wwwroot\index.html" Services="{DynamicResource services}">
+    <blazor:BlazorWebView x:Name="BlazorWebView" HostPage="wwwroot\index.html">
       <blazor:BlazorWebView.RootComponents>
         <blazor:RootComponent Selector="#app" ComponentType="{x:Type local:Main}" />
       </blazor:BlazorWebView.RootComponents>

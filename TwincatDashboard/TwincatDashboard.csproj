@@ -12,7 +12,7 @@
     <PackageReference Include="Beckhoff.TwinCAT.Ads" Version="6.2.296" />
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
     <PackageReference Include="Masa.Blazor" Version="1.8.0" />
-    <PackageReference Include="MatFileIO" Version="1.0.2" />
+    <PackageReference Include="MatFileIO" Version="1.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.100" />
     <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2" />
     <PackageReference Include="MathNet.Numerics.Data.Matlab" Version="6.0.0-beta2" />
@@ -31,5 +31,8 @@
     <Content Update="wwwroot\**">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Hosting\\**\\*.cs" />
   </ItemGroup>
 </Project>

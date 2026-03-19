@@ -1,0 +1,39 @@
+﻿@inject AdsComService AdsComService
+@inject LogDataService LogDataService
+@inject LogPlotService LogPlotService
+@inject IAppConfigStore ConfigStore
+@inject IAppPaths Paths
+@page "/"
+
+<div class="datalog-page">
+	<MTabs Class="datalog-tabs" Grow>
+		<MTab>Select Symbols</MTab>
+		<MTab Disabled="!AdsComService.IsAdsConnected">Log and Plot Symbols</MTab>
+		<MTabItem>
+			<DataLogAvailableSymbolsTab EditingDisabled="EditingDisabled"
+																	AvailableSymbols="_availableSymbols"
+																	Headers="_availableSymbolHeaders"
+																	SearchName="_searchAvailableSymbolName"
+																	@bind-SearchTmpName="_searchAvailableSymbolTmpName"
+																	OnSearchChanged="OnSearchAvailableSymbolNameChanged"
+																	GetAvailableSymbols="GetAvailableSymbols"
+																	OpenConfigFolder="OpenConfigFolder"
+																	CustomFilter="FilterSymbolBySimilarityScore" />
+		</MTabItem>
+
+		<MTabItem>
+			<DataLogLogSymbolsTab EditingDisabled="EditingDisabled"
+														IsLoggingBusy="IsLoggingBusy"
+														@bind-StartLogging="StartLogging"
+														LogSymbols="LogSymbols"
+														Headers="_logSymbolHeaders"
+														SearchName="_searchLogSymbolName"
+														@bind-SearchTmpName="_searchLogSymbolTmpName"
+														OnSearchChanged="OnSearchLogSymbolNameChanged"
+														CloseAllPlotWindows="CloseAllPlotWindows"
+														OpenConfigFolder="OpenConfigFolder"
+														CustomFilter="FilterSymbolBySimilarityScore" />
+		</MTabItem>
+	</MTabs>
+</div>
+

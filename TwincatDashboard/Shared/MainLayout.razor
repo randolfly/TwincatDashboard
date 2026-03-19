@@ -1,4 +1,6 @@
 ﻿@inject AdsComService AdsComService
+@inject IAppConfigStore ConfigStore
+@inject IAppPaths Paths
 @using System.Diagnostics
 @using TwinCAT.Ads
 @inherits LayoutComponentBase
@@ -155,9 +157,10 @@
 	public List<AdsRouteInfo> AdsRouteInfos { get; set; } = new();
 	private AdsRouteInfo? SelectedAdsRoute { get; set; }
 
-	private readonly AdsConfig _adsConfig = AppConfigService.AppConfig.AdsConfig;
+	private AdsConfig _adsConfig = new();
 
 	protected override void OnInitialized() {
+		_adsConfig = ConfigStore.Current.AdsConfig;
 		NetId = _adsConfig.NetId;
 		PortId = _adsConfig.PortId;
 
@@ -167,7 +170,7 @@
 	private async Task ConnectAdsServerAsync() {
 		_adsConfig.NetId = NetId;
 		_adsConfig.PortId = PortId;
-		AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
+		await ConfigStore.SaveAsync();
 		await AdsComService.ConnectAdsServerAsync(_adsConfig);
 		CheckAdsState();
 	}
@@ -189,9 +192,9 @@
 		CheckAdsState();
 	}
 
-	private static void OpenConfigFolder() {
+	private void OpenConfigFolder() {
 		Process.Start(new ProcessStartInfo {
-			FileName = AppConfig.FolderName,
+			FileName = Paths.AppDataDirectory,
 			UseShellExecute = true
 		});
 	}

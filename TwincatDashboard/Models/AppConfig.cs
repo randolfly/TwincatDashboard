@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Reflection;
 using System.Text.Json.Serialization;
 
 using TwinCAT.Ads;
@@ -11,24 +10,6 @@ namespace TwincatDashboard.Models;
 public class AppConfig {
   public AdsConfig AdsConfig { get; set; } = new();
   public LogConfig LogConfig { get; set; } = new();
-
-  #region Config File Storage Path
-
-  public static string AppName => Assembly.GetCallingAssembly().FullName!.Split(',')[0];
-
-  public static string FolderName =>
-      Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-          AppName
-      );
-
-  public static string FileName => AppName + ".json";
-  public static string ConfigFileFullName => Path.Combine(FolderName, FileName);
-
-  public static string AppLogFileFullName =>
-      Path.Combine(FolderName, "log", AppName + "_log_" + ".txt");
-
-  #endregion
 }
 
 public class AdsConfig {

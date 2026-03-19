@@ -1,6 +1,5 @@
 ﻿using Serilog;
 
-using System.Diagnostics;
 using System.IO;
 using System.Xml.Linq;
 
@@ -221,9 +220,28 @@ public class AdsComService : IDisposable {
     _adsClient.AdsNotification -= handler;
   }
 
+  public void AddNotificationExHandler(EventHandler<AdsNotificationExEventArgs> handler) {
+    _adsClient.AdsNotificationEx += handler;
+  }
+
+  public void RemoveNotificationExHandler(EventHandler<AdsNotificationExEventArgs> handler) {
+    _adsClient.AdsNotificationEx -= handler;
+  }
+
   public uint AddDeviceNotification(string path, int byteSize, NotificationSettings settings) {
     _adsClient.TryAddDeviceNotification(path, byteSize, settings, null, out var notificationHandle);
     return notificationHandle;
+  }
+
+  public uint AddDeviceNotificationEx(string path, NotificationSettings settings, object userData, Type type) {
+    // `dimensions` is only needed for arrays. Scalars should pass an empty array.
+    var err = _adsClient.TryAddDeviceNotificationEx(path, settings, userData, type, Array.Empty<int>(), out var handle);
+    if (err != AdsErrorCode.NoError) {
+      Log.Error("Failed to add device notification ex for {Path} ({Type}). Error: {Error}", path, type, err);
+      return 0;
+    }
+
+    return handle;
   }
 
   public void RemoveDeviceNotification(uint notificationHandle) {

@@ -1,13 +1,13 @@
-﻿using Serilog;
+﻿using MatFileIO;
+
+using Microsoft.Extensions.Logging;
 
 using System.Buffers;
 using System.Buffers.Text;
 using System.IO;
 using System.Text;
 
-using MatFileIO;
-
-using TwincatDashboard.Models;
+using TwincatDashboard.Services.Configuration;
 using TwincatDashboard.Utils;
 
 namespace TwincatDashboard.Services;
@@ -15,11 +15,37 @@ namespace TwincatDashboard.Services;
 public class LogDataService {
   private static int BufferCapacity => 1000;
 
+  private readonly IAppPaths _paths;
+  private readonly ILogger<LogDataService> _logger;
+  private readonly ILoggerFactory _loggerFactory;
+
+  public LogDataService(IAppPaths paths, ILogger<LogDataService> logger, ILoggerFactory loggerFactory) {
+    _paths = paths;
+    _logger = logger;
+    _loggerFactory = loggerFactory;
+
+    Directory.CreateDirectory(_paths.TempDirectory);
+    _logger.LogDebug("Log temp directory: {TempDirectory}", _paths.TempDirectory);
+  }
+
   public Dictionary<string, List<double>> SlowLogDict { get; } = [];
   public Dictionary<string, LogDataChannel> QuickLogDict { get; } = [];
 
   public void AddChannel(string channelName) {
-    QuickLogDict.Add(channelName, new LogDataChannel(BufferCapacity, channelName));
+    _ = GetOrAddChannel(channelName);
+  }
+
+  public LogDataChannel? GetOrAddChannel(string channelName) {
+    if (string.IsNullOrWhiteSpace(channelName))
+      return null;
+
+    if (QuickLogDict.ContainsKey(channelName))
+      return QuickLogDict[channelName];
+
+    var channelLogger = _loggerFactory.CreateLogger($"LogDataChannel[{channelName}]");
+    var channel = new LogDataChannel(BufferCapacity, channelName, _paths.TempDirectory, channelLogger);
+    QuickLogDict.Add(channelName, channel);
+    return channel;
   }
 
   public void RemoveAllChannels() {
@@ -27,8 +53,25 @@ public class LogDataService {
     QuickLogDict.Clear();
   }
 
-  public async Task AddDataAsync(string channelName, double data) {
-    if (QuickLogDict.TryGetValue(channelName, out var value)) await value.AddAsync(data);
+  /// <summary>
+  /// Hot path (ADS 1ms cyclic): keep this sync and allocation-free.
+  /// </summary>
+  public void AddData(string channelName, double data) {
+    if (QuickLogDict.TryGetValue(channelName, out var value))
+      value.Add(data);
+  }
+
+  public Task AddDataAsync(string channelName, double data) {
+    AddData(channelName, data);
+    return Task.CompletedTask;
+  }
+
+  /// <summary>
+  /// Ensure all pending buffered writes are flushed to temp files before export/load.
+  /// </summary>
+  public async Task FlushAllChannelsAsync() {
+    foreach (var channel in QuickLogDict.Values)
+      await channel.FlushAsync();
   }
 
   public async Task<Dictionary<string, double[]>> LoadAllChannelsAsync() {
@@ -191,199 +234,5 @@ public class LogDataService {
 
   public void DeleteTmpFiles() {
     QuickLogDict.Values.ToList().ForEach(channel => channel.DeleteTmpFile());
-  }
-}
-
-public class LogDataChannel(int bufferCapacity, string channelName) : IDisposable {
-  // storage tmp data for logging(default data type is double)
-  private readonly CircularBuffer<double> _channelBuffer = new(bufferCapacity);
-  private string Name { get; } = channelName;
-  public string? Description { get; set; }
-  public int BufferCapacity { get; init; } = bufferCapacity;
-  public int DataLength { get; private set; }
-
-  private static string LogDataTempFolder {
-    get {
-      var path = Path.Combine(AppConfig.FolderName, AppConfig.FolderName, "tmp/");
-      if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-
-      return path;
-    }
-  }
-
-  private string FilePath => Path.Combine(LogDataTempFolder, "_" + Name + ".csv");
-
-  // Use ArrayPool to rent and return arrays for performance optimization
-  private static ArrayPool<double> ArrayPool => ArrayPool<double>.Shared;
-  public double[] LogData { get; private set; } = ArrayPool.Rent(0);
-
-  public async Task AddAsync(double data) {
-    _channelBuffer.Add(data);
-    DataLength++;
-    if (_channelBuffer.Size * 2 >= _channelBuffer.Capacity) {
-      Log.Debug($"Buffer is half size, save to file: {FilePath}");
-      var dataSrc = _channelBuffer.RemoveRange(_channelBuffer.Size);
-      await SaveToFileAsync(dataSrc, FilePath);
-    }
-  }
-
-  private static async Task SaveToFileAsync((ReadOnlyMemory<double> First, ReadOnlyMemory<double> Second) data, string filePath) {
-    await using var fileStream = new FileStream(
-        filePath,
-        FileMode.Append,
-        FileAccess.Write,
-        FileShare.None,
-        64 * 512,
-        true
-    );
-
-    var buffer = ArrayPool<byte>.Shared.Rent(256);
-    try {
-      await SaveMemoryToFile(data.First, fileStream, buffer);
-      await SaveMemoryToFile(data.Second, fileStream, buffer);
-    } finally {
-      ArrayPool<byte>.Shared.Return(buffer);
-    }
-
-    static async Task SaveMemoryToFile(ReadOnlyMemory<double> mem, FileStream fileStream, byte[] buffer) {
-      for (var i = 0; i < mem.Length; i++) {
-        var value = mem.Span[i];
-        if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten, new StandardFormat('G', 17)))
-          continue;
-
-        buffer[bytesWritten++] = (byte)'\n';
-        await fileStream.WriteAsync(buffer.AsMemory(0, bytesWritten));
-      }
-    }
-  }
-
-  public async Task LoadFromFileByArrayPoolAsync() {
-    // if file not exists, return empty array pool
-    if (!File.Exists(FilePath)) {
-      LogData = ArrayPool.Rent(0);
-      return;
-    }
-
-    LogData = ArrayPool.Rent(DataLength);
-
-    await using var fileStream = new FileStream(
-        FilePath,
-        FileMode.Open,
-        FileAccess.Read,
-        FileShare.Read,
-        64 * 1024,
-        true
-    );
-
-    var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
-    byte[] lineBuffer = ArrayPool<byte>.Shared.Rent(256);
-    var lineLength = 0;
-    var index = 0;
-    var stop = false;
-
-    try {
-      int bytesRead;
-      while (!stop && (bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0) {
-        var span = buffer.AsSpan(0, bytesRead);
-        var start = 0;
-
-        while (start < span.Length && !stop) {
-          var newlineIndex = span.Slice(start).IndexOf((byte)'\n');
-          // if bytes are not aligned, the rest data are stored into lineBuffer until next read
-          if (newlineIndex < 0) {
-            AppendToLineBuffer(span.Slice(start));
-            break;
-          }
-
-          var chunk = span.Slice(start, newlineIndex);
-          AppendToLineBuffer(chunk);
-          ProcessLine();
-          start += newlineIndex + 1;
-        }
-      }
-
-      if (!stop && lineLength > 0)
-        ProcessLine();
-    } finally {
-      ArrayPool<byte>.Shared.Return(buffer);
-      ArrayPool<byte>.Shared.Return(lineBuffer);
-    }
-
-    // update DataLength if actual data length is less than expected(file IO latency may cause this)
-    if (index <= DataLength)
-      DataLength = index;
-
-    if (DataLength > 0) {
-      for (var i = DataLength; i < LogData.Length; i++)
-        LogData[i] = LogData[DataLength - 1]; // fill the rest with last value
-    }
-
-    Log.Information(
-        "{File} ideal data length: {DataLength}, actual data length: {ActualLength}",
-        FilePath,
-        LogData.Length,
-        index
-    );
-
-    Log.Information("Retrieve all data from file {FilePath}", FilePath);
-
-    void AppendToLineBuffer(ReadOnlySpan<byte> chunk) {
-      EnsureLineBufferCapacity(lineLength + chunk.Length);
-      chunk.CopyTo(lineBuffer.AsSpan(lineLength));
-      lineLength += chunk.Length;
-    }
-
-    void EnsureLineBufferCapacity(int required) {
-      if (required <= lineBuffer.Length)
-        return;
-
-      var newSize = Math.Max(required, lineBuffer.Length * 2);
-      var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
-      lineBuffer.AsSpan(0, lineLength).CopyTo(newBuffer);
-      ArrayPool<byte>.Shared.Return(lineBuffer);
-      lineBuffer = newBuffer;
-    }
-
-    void ProcessLine() {
-      if (index >= LogData.Length) {
-        stop = true;
-        return;
-      }
-
-      var lineSpan = lineBuffer.AsSpan(0, lineLength);
-      if (lineSpan.Length > 0 && lineSpan[^1] == (byte)'\r')
-        lineSpan = lineSpan[..^1];
-
-      if (Utf8Parser.TryParse(lineSpan, out double value, out var consumed) && consumed == lineSpan.Length) {
-        LogData[index] = value;
-      } else {
-        Log.Warning(
-            "Failed to parse line: {Line} of {File}",
-            Encoding.UTF8.GetString(lineSpan),
-            FilePath
-        );
-        LogData[index] = 0;
-      }
-
-      index++;
-      lineLength = 0;
-    }
-  }
-
-  public void DeleteTmpFile() {
-    if (File.Exists(FilePath)) {
-      Log.Information("Delete tmp log file: {FilePath}", FilePath);
-      File.Delete(FilePath);
-    }
-  }
-
-  public void Dispose() {
-    if (LogData is not null && LogData.Length > 0) {
-      Log.Information("Return {Channel} LogData of size: {Size}", Name, LogData.Length);
-      ArrayPool.Return(LogData);
-      LogData = [];
-    }
-
-    _channelBuffer.ReturnBufferToArrayPool();
   }
 }

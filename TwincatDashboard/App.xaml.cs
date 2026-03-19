@@ -1,45 +1,60 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
 using Serilog.Events;
 
+using System.IO;
 using System.Text;
 using System.Windows;
 
-using TwincatDashboard.Models;
 using TwincatDashboard.Services;
+using TwincatDashboard.Services.Configuration;
 
 namespace TwincatDashboard;
 
 /// <summary>
-///     Interaction logic for App.xaml
+///   Interaction logic for App.xaml
 /// </summary>
 public partial class App : Application {
+  private IHost? _host;
+
   protected override void OnStartup(StartupEventArgs e) {
-    ConfigLogger();
+    _host = BuildHost();
 
-    var serviceCollection = new ServiceCollection();
-    serviceCollection.AddLogging(builder => {
-      builder.ClearProviders();
-      builder.AddSerilog(dispose: true);
-    });
-    serviceCollection.AddWpfBlazorWebView();
-    serviceCollection.AddMasaBlazor();
-    serviceCollection.AddSingleton<AdsComService>();
-    serviceCollection.AddSingleton<LogDataService>();
-    serviceCollection.AddSingleton<LogPlotService>();
+    ConfigureUnhandledExceptionLogging();
 
-    AppConfigService.LoadConfig(AppConfig.ConfigFileFullName);
+    _host.Start();
 
-    Resources.Add("services", serviceCollection.BuildServiceProvider());
+    var configStore = _host.Services.GetRequiredService<IAppConfigStore>();
+    configStore.LoadAsync().GetAwaiter().GetResult();
+
+    MainWindow = _host.Services.GetRequiredService<MainWindow>();
+    MainWindow.Show();
 
     base.OnStartup(e);
-
-    Log.Information("Application started");
   }
 
-  private void ConfigLogger() {
+  private static IHost BuildHost() {
+    var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings {
+      // Ensure appsettings.json is loaded from the output folder (next to the exe).
+      ContentRootPath = AppContext.BaseDirectory
+    });
+
+    var paths = new AppPaths();
+    builder.Services.AddSingleton<IAppPaths>(paths);
+    builder.Services.AddSingleton<IAppConfigStore, JsonAppConfigStore>();
+
+    builder.Services.AddWpfBlazorWebView();
+    builder.Services.AddMasaBlazor();
+
+    builder.Services.AddSingleton<AdsComService>();
+    builder.Services.AddSingleton<LogDataService>();
+    builder.Services.AddSingleton<LogPlotService>();
+    builder.Services.AddSingleton<MainWindow>();
+
+    Directory.CreateDirectory(paths.LogDirectory);
     Log.Logger = new LoggerConfiguration()
       .MinimumLevel.Debug()
       .MinimumLevel.Override("Masa", LogEventLevel.Warning)
@@ -52,34 +67,46 @@ public partial class App : Application {
       .Enrich.WithProperty("Application", "TwinCAT-DashBoard")
       .WriteTo.Debug(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
       .WriteTo.File(
-          AppConfig.AppLogFileFullName,
-          encoding: Encoding.UTF8,
-          rollingInterval: RollingInterval.Day,
-          outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        paths.LogFilePath,
+        encoding: Encoding.UTF8,
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
       )
       .CreateLogger();
 
-    DispatcherUnhandledException += (sender, args) => {
-      Log.Fatal(args.Exception, "UI Thread Unhandled exception");
+    builder.Logging.ClearProviders();
+    builder.Services.AddSerilog(Log.Logger, dispose: true);
+
+    Log.Information("Host built and logging configured");
+    return builder.Build();
+  }
+
+  private void ConfigureUnhandledExceptionLogging() {
+    DispatcherUnhandledException += (_, args) => {
+      Log.Fatal(args.Exception, "UI thread unhandled exception");
       args.Handled = true;
     };
 
-    TaskScheduler.UnobservedTaskException += (sender, args) => {
-      Log.Error(args.Exception, "Unobserved Task Exception");
+    TaskScheduler.UnobservedTaskException += (_, args) => {
+      Log.Error(args.Exception, "Unobserved task exception");
       args.SetObserved();
     };
 
-    AppDomain.CurrentDomain.UnhandledException += (sender, args) => {
-      if (args.ExceptionObject is Exception ex) {
-        Log.Fatal(ex, "Non-UI Thread Unhandled exception");
-      } else {
-        Log.Fatal("Non-UI Thread Unhandled exception: {ExceptionObject}", args.ExceptionObject);
-      }
+    AppDomain.CurrentDomain.UnhandledException += (_, args) => {
+      if (args.ExceptionObject is Exception ex)
+        Log.Fatal(ex, "Non-UI thread unhandled exception");
+      else
+        Log.Fatal("Non-UI thread unhandled exception: {ExceptionObject}", args.ExceptionObject);
     };
   }
 
   protected override void OnExit(ExitEventArgs e) {
-    Log.CloseAndFlush();
-    base.OnExit(e);
+    try {
+      _host?.StopAsync().GetAwaiter().GetResult();
+      _host?.Dispose();
+    } finally {
+      Log.CloseAndFlush();
+      base.OnExit(e);
+    }
   }
 }

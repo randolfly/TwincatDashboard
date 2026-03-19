@@ -1,5 +1,6 @@
 ﻿@using Microsoft.Win32
 @inject AdsComService AdsComService
+@inject IAppConfigStore ConfigStore
 
 <div class="container">
   <div class="Folder">
@@ -81,11 +82,12 @@
 
   private Func<int, StringBoolean> _numberRule = value => value is >= SlowLogPeriodMin and <= SlowLogPeriodMax ? true : "Must between 2000 and 10000";
 
-  private LogConfig LogConfig { get; set; } = AppConfigService.AppConfig.LogConfig;
+  private LogConfig LogConfig { get; set; } = new();
 
 
   protected override async Task OnInitializedAsync()
   {
+    LogConfig = ConfigStore.Current.LogConfig;
     FolderName = LogConfig.FolderName;
     FileName = LogConfig.FileName;
     SlowLogPeriod = LogConfig.SlowLogPeriod;
@@ -105,7 +107,7 @@
     LogConfig.SlowLogPeriod = SlowLogPeriod;
     LogConfig.FileType = ExportLogTypes;
     LogConfig.ReadNamespace = ReadNamespace;
-    AppConfigService.SaveConfig(AppConfig.ConfigFileFullName);
+    ConfigStore.SaveAsync().GetAwaiter().GetResult();
     Log.Information("LogConfig saved.");
   }
 
